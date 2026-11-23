@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#fc4c02">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Garmin Sync">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Garmin Sync</title>
+<style>
+  :root {
+    color-scheme: light;
+    --orange: #fc4c02; --ink: #111111; --paper: #ffffff;
+    --ok: #0b3d1c; --ok-bg: #dff5e5; --ok-line: #14692f;
+    --err: #6e0f09; --err-bg: #fde8e6; --err-line: #a8261d;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background-color: #ffc2a5; }
+  body {
+    color: var(--ink);
+    font: 26px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh; padding-bottom: 240px;
+  }
+  .top {
+    background: var(--orange); border-bottom: 8px solid var(--ink);
+    padding: calc(44px + env(safe-area-inset-top, 0px)) 24px 34px;
+  }
+  h2 {
+    max-width: 680px; margin: 0 auto;
+    font-size: 4.5rem; line-height: 1.02; font-weight: 900;
+    letter-spacing: -0.02em; color: var(--ink);
+  }
+  main { max-width: 680px; margin: 0 auto; padding: 32px 24px 0; }
+
+  .shoes { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
+  .shoe {
+    appearance: none; -webkit-appearance: none; text-align: left; cursor: pointer;
+    background: var(--paper); color: var(--ink);
+    border: 5px solid var(--ink); border-radius: 18px;
+    box-shadow: 0 7px 0 var(--ink);
+    padding: 24px 22px; font: inherit; font-weight: 900; font-size: 1.5rem;
+    line-height: 1.15; min-height: 104px; display: flex; align-items: center; gap: 22px;
+    width: var(--w, auto); max-width: 100%;
+    transition: transform .08s, box-shadow .08s, width .25s ease, background .15s;
+  }
+  .shoe[aria-checked="true"] { width: 100%; }
+  .shoe:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
+  .shoe .dot {
+    width: 38px; height: 38px; border-radius: 50%; flex: none;
+    border: 5px solid var(--ink); background: var(--paper);
+  }
+  .shoe[aria-checked="true"] { background: var(--orange); }
+  .shoe[aria-checked="true"] .dot {
+    background: radial-gradient(var(--ink) 0 42%, var(--paper) 46%);
+  }
+  .shoe small { display: block; font-size: 1.05rem; font-weight: 700; margin-top: 2px; }
+  .shoe:focus-visible, .go:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
+  .skeleton { width: 100%; height: 104px; border-radius: 18px; border: 5px solid #e3e3e3; }
+
+  .bar {
+    position: fixed; left: 0; right: 0; bottom: 0; background: var(--paper);
+    border-top: 6px solid var(--ink);
+    padding: 22px 24px calc(22px + env(safe-area-inset-bottom, 0px));
+  }
+  .go {
+    display: block; width: 100%; max-width: 680px; margin: 0 auto;
+    border: 5px solid var(--ink); border-radius: 18px; padding: 28px 20px; min-height: 104px;
+    background: var(--orange); color: var(--ink);
+    box-shadow: 0 7px 0 var(--ink);
+    font: inherit; font-weight: 900; font-size: 1.7rem; cursor: pointer;
+    text-transform: uppercase; letter-spacing: .05em;
+    transition: transform .08s, box-shadow .08s;
+  }
+  .go:active:not([disabled]) { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
+  .go[disabled] { background: #d9d9d9; color: #555; box-shadow: 0 7px 0 #8a8a8a; border-color: #8a8a8a; cursor: default; }
+
+  .spin {
+    display: inline-block; width: 26px; height: 26px; margin-right: 16px;
+    vertical-align: -4px; border-radius: 50%;
+    border: 5px solid currentColor; border-right-color: transparent;
+    animation: r .8s linear infinite;
+  }
+  @keyframes r { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2.5s; } .shoe { transition: none; } }
+
+  .status { margin-top: 34px; border-radius: 18px; padding: 22px 24px; display: none; font-size: 1.25rem; font-weight: 700; border: 5px solid; }
+  .status.show { display: block; }
+  .status.ok { background: var(--ok-bg); color: var(--ok); border-color: var(--ok-line); }
+  .status.err { background: var(--err-bg); color: var(--err); border-color: var(--err-line); }
+  .status strong { display: block; margin-bottom: 4px; font-size: 1.45rem; font-weight: 900; }
+  .last:empty { display: none; }
+  .last { display: inline-block; background: var(--paper); border: 4px solid var(--ink); border-radius: 14px; padding: 10px 16px; color: var(--ink); font-weight: 800; font-size: 1.1rem; margin-top: 28px; }
+
+  .intro { font-weight: 800; font-size: 1.3rem; margin: 0 0 22px; }
+  .field {
+    display: block; width: 100%; border: 5px solid var(--ink); border-radius: 18px;
+    padding: 24px 22px; font: inherit; font-weight: 800; font-size: 1.4rem;
+    background: var(--paper); color: var(--ink); margin-bottom: 26px;
+  }
+  .field:focus { outline: 5px solid var(--orange); outline-offset: 4px; }
+  .go.static { position: static; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header class="top"><h2 id="lbl">Kies je schoenen.</h2></header>
+<main>
+  <div id="setup" hidden>
+    <p class="intro" id="setupMsg">Voer één keer je sleutel in.</p>
+    <input class="field" id="keyInput" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Sleutel">
+    <button class="go static" id="saveKey">Opslaan</button>
+  </div>
+
+  <div id="appview">
+    <div class="shoes" id="shoes" role="radiogroup" aria-labelledby="lbl">
+      <div class="skeleton"></div><div class="skeleton"></div>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+    <div class="last" id="last"></div>
+  </div>
+</main>
+
+<div class="bar" id="bar">
+  <button class="go" id="go" disabled>Synchroniseren</button>
+</div>
+
+<script>
+  // Adres van je Apps Script-webapp (de "motor" op de achtergrond)
+  var API_URL = 'https://script.google.com/macros/s/AKfycbwc6hIYAZ_qDrTggeKxDIYJm4pqfmDHxaqtdZHnVvny5TQh0vAZuKe3VK7FiVLIjvl8wA/exec';
+
+  var FALLBACK_SHOES = ['BLANCO'];
+  var selected = null;
+  var busy = false;
+  var cooldown = false;
+  var key = '';
+  var $ = function (id) { return document.getElementById(id); };
+
+  function store(k, v) {
+    try {
+      if (v === undefined) return localStorage.getItem(k);
+      if (v === null) { localStorage.removeItem(k); return null; }
+      localStorage.setItem(k, v);
+    } catch (e) { return null; }
+  }
+
+  function api(params) {
+    params.key = key;
+    var q = Object.keys(params).map(function (k) {
+      return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+    }).join('&');
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, 45000);
+    return fetch(API_URL + '?' + q, { redirect: 'follow', signal: ctrl.signal })
+      .then(function (r) { return r.json(); })
+      .then(function (res) { clearTimeout(timer); return res; })
+      .catch(function (e) {
+        clearTimeout(timer);
+        if (e && e.name === 'AbortError') throw new Error('Geen antwoord. Probeer het opnieuw.');
+        throw new Error('Geen verbinding. Controleer je internet en probeer opnieuw.');
+      });
+  }
+
+  // ---------- weergave ----------
+  function showSetup(msg) {
+    $('lbl').textContent = 'Sleutel.';
+    $('setupMsg').textContent = msg || 'Voer één keer je sleutel in.';
+    $('setup').hidden = false;
+    $('appview').hidden = true;
+    $('bar').hidden = true;
+  }
+
+  function showApp() {
+    $('lbl').textContent = 'Kies je schoenen.';
+    $('setup').hidden = true;
+    $('appview').hidden = false;
+    $('bar').hidden = false;
+  }
+
+  function resetKey(msg) {
+    store('key', null);
+    key = '';
+    $('keyInput').value = '';
+    showSetup(msg);
+  }
+
+  function renderShoes(list) {
+    var box = $('shoes');
+    box.innerHTML = '';
+    var saved = store('shoe');
+    selected = list.indexOf(saved) > -1 ? saved : list[0];
+    list.forEach(function (name) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'shoe';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', name === selected);
+      var dot = document.createElement('span'); dot.className = 'dot';
+      var txt = document.createElement('span'); txt.textContent = name;
+      b.appendChild(dot); b.appendChild(txt);
+      if (name === 'BLANCO') {
+        var hint = document.createElement('small');
+        hint.textContent = 'telt niet mee';
+        txt.appendChild(hint);
+      }
+      b.onclick = function () {
+        if (busy) return;
+        selected = name; store('shoe', name);
+        Array.prototype.forEach.call(box.children, function (c) {
+          c.setAttribute('aria-checked', c === b);
+        });
+      };
+      box.appendChild(b);
+    });
+    $('go').disabled = cooldown;
+    measure();
+  }
+
+  // Alle tegels even breed als de langste naam; de gekozen tegel rekt uit naar volle breedte.
+  function measure() {
+    var box = $('shoes');
+    box.style.removeProperty('--w');
+    var max = 0;
+    Array.prototype.forEach.call(box.querySelectorAll('.shoe'), function (b) {
+      var prev = b.style.width;
+      b.style.transition = 'none';
+      b.style.width = 'auto';
+      max = Math.max(max, Math.ceil(b.getBoundingClientRect().width));
+      b.style.width = prev;
+      void b.offsetWidth;
+      b.style.transition = '';
+    });
+    if (max) box.style.setProperty('--w', max + 'px');
+  }
+  window.addEventListener('resize', function () {
+    if ($('shoes').querySelector('.shoe')) measure();
+  });
+
+  function show(type, title, msg) {
+    var s = $('status');
+    s.className = 'status show ' + type;
+    s.innerHTML = '';
+    var t = document.createElement('strong'); t.textContent = title;
+    s.appendChild(t);
+    if (msg) s.appendChild(document.createTextNode(msg));
+  }
+
+  function showLast() {
+    var t = store('last');
+    $('last').textContent = t ? 'Laatste synchronisatie: ' + t : '';
+  }
+
+  // ---------- acties ----------
+  function loadShoes() {
+    var cached = [];
+    try { cached = JSON.parse(store('shoes') || '[]'); } catch (e) {}
+    if (cached.length) renderShoes(cached);
+
+    api({ action: 'shoes' }).then(function (res) {
+      if (!res.success) {
+        if (res.code === 'BAD_KEY') { resetKey('Die sleutel klopt niet. Probeer opnieuw.'); return; }
+        throw new Error(res.error || 'Onbekende fout');
+      }
+      var list = res.shoes && res.shoes.length ? res.shoes : FALLBACK_SHOES;
+      if (JSON.stringify(list) !== JSON.stringify(cached)) {
+        store('shoes', JSON.stringify(list));
+        renderShoes(list);
+      }
+    }).catch(function (e) {
+      if (!cached.length) {
+        renderShoes(FALLBACK_SHOES);
+        show('err', 'Schoenen laden mislukt', e.message);
+      }
+    });
+  }
+
+  $('go').onclick = function () {
+    if (busy || !selected) return;
+    busy = true;
+    var btn = $('go');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span>Bezig met synchroniseren…';
+    $('status').className = 'status';
+    api({ action: 'sync', shoe: selected }).then(function (res) {
+      if (!res.success) {
+        if (res.code === 'BAD_KEY') { resetKey('Die sleutel klopt niet. Probeer opnieuw.'); return; }
+        throw new Error(res.error || 'Onbekende fout');
+      }
+      show('ok', 'Synchronisatie gestart', 'Nieuwe wandelingen staan binnen enkele minuten in je sheet.');
+      store('last', new Date().toLocaleString('nl-NL', { dateStyle: 'short', timeStyle: 'short' }) + ' (' + selected + ')');
+      showLast();
+      cooldown = true;
+      setTimeout(function () { cooldown = false; $('go').disabled = false; }, 8000);
+    }).catch(function (e) {
+      show('err', 'Synchronisatie mislukt', e.message || 'Probeer het opnieuw.');
+    }).then(function () {
+      busy = false;
+      btn.disabled = cooldown;
+      btn.textContent = 'Synchroniseren';
+    });
+  };
+
+  $('saveKey').onclick = function () {
+    var v = $('keyInput').value.trim();
+    if (!v) { $('setupMsg').textContent = 'Vul je sleutel in.'; return; }
+    key = v;
+    store('key', v);
+    showApp();
+    showLast();
+    loadShoes();
+  };
+
+  // ---------- start ----------
+  key = store('key') || '';
+  if (key) {
+    showApp();
+    showLast();
+    loadShoes();
+  } else {
+    showSetup();
+  }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    });
+  }
+</script>
+</body>
+</html>
