@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="W-Sync">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-maskable-192.png">
 <title>W-Sync</title>
 <style>
   :root {
@@ -314,6 +314,14 @@
   };
 
   // ---------- start ----------
+  // Sleutel uit de link halen (#k=...), onthouden en uit de adresbalk verwijderen
+  try {
+    var hm = /[#&]k=([^&]+)/.exec(location.hash);
+    if (hm) {
+      store('key', decodeURIComponent(hm[1]));
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+  } catch (e) {}
   key = store('key') || '';
   if (key) {
     showApp();
