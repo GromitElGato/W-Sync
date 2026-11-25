@@ -103,11 +103,31 @@
   }
   .field:focus { outline: 5px solid var(--orange); outline-offset: 4px; }
   .go.static { position: static; }
+  .tabs { max-width: 680px; margin: 0 auto; padding: 28px 24px 0; display: flex; gap: 16px; }
+  .tab {
+    flex: 1; appearance: none; -webkit-appearance: none; cursor: pointer;
+    background: var(--paper); color: var(--ink); border: 5px solid var(--ink); border-radius: 18px;
+    box-shadow: 0 6px 0 var(--ink); padding: 18px 10px; font: inherit; font-weight: 900; font-size: 1.25rem;
+  }
+  .tab[aria-selected="true"] { background: var(--orange); }
+  .tab:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--ink); }
+  .tab:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
+  .kmrow {
+    display: flex; justify-content: space-between; align-items: center; gap: 18px;
+    background: var(--paper); border: 5px solid var(--ink); border-radius: 18px;
+    padding: 22px; margin-bottom: 18px; font-weight: 900; font-size: 1.4rem; line-height: 1.15;
+  }
+  .kmrow .v { white-space: nowrap; }
+  .kmrow.total { background: var(--orange); margin-top: 28px; box-shadow: 0 7px 0 var(--ink); font-size: 1.6rem; }
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <header class="top"><h2 id="lbl">Kies je schoenen.</h2></header>
+<nav class="tabs" id="tabs" role="tablist" hidden>
+  <button class="tab" id="tabShoes" role="tab" aria-selected="true" type="button">Schoenen</button>
+  <button class="tab" id="tabKm" role="tab" aria-selected="false" type="button">Kilometers</button>
+</nav>
 <main>
   <div id="setup" hidden>
     <p class="intro" id="setupMsg">Voer één keer je sleutel in.</p>
@@ -121,6 +141,11 @@
     </div>
     <div class="status" id="status" role="status" aria-live="polite"></div>
     <div class="last" id="last"></div>
+  </div>
+
+  <div id="kmview" hidden>
+    <div id="kmlist"></div>
+    <div class="status" id="kmstatus" role="status" aria-live="polite"></div>
   </div>
 </main>
 
@@ -170,14 +195,27 @@
     $('setupMsg').textContent = msg || 'Voer één keer je sleutel in.';
     $('setup').hidden = false;
     $('appview').hidden = true;
+    $('kmview').hidden = true;
+    $('tabs').hidden = true;
     $('bar').hidden = true;
   }
 
+  var tab = 'shoes';
+  function setTab(t) {
+    tab = t;
+    $('tabShoes').setAttribute('aria-selected', t === 'shoes');
+    $('tabKm').setAttribute('aria-selected', t === 'km');
+    $('lbl').textContent = t === 'shoes' ? 'Kies je schoenen.' : 'Kilometers.';
+    $('appview').hidden = t !== 'shoes';
+    $('bar').hidden = t !== 'shoes';
+    $('kmview').hidden = t !== 'km';
+    if (t === 'km') loadKm();
+  }
+
   function showApp() {
-    $('lbl').textContent = 'Kies je schoenen.';
     $('setup').hidden = true;
-    $('appview').hidden = false;
-    $('bar').hidden = false;
+    $('tabs').hidden = false;
+    setTab(tab);
   }
 
   function resetKey(msg) {
@@ -252,6 +290,59 @@
     var t = store('last');
     $('last').textContent = t ? 'Laatste synchronisatie: ' + t : '';
   }
+
+  // ---------- kilometers ----------
+  function fmtKm(n) {
+    return n.toLocaleString('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' km';
+  }
+
+  function kmRow(name, text, total) {
+    var r = document.createElement('div');
+    r.className = 'kmrow' + (total ? ' total' : '');
+    var a = document.createElement('span'); a.textContent = name;
+    var b = document.createElement('span'); b.className = 'v'; b.textContent = text;
+    r.appendChild(a); r.appendChild(b);
+    return r;
+  }
+
+  function renderKm(list) {
+    var box = $('kmlist');
+    box.innerHTML = '';
+    var sum = 0;
+    list.forEach(function (s) {
+      var km = Number(s.km) || 0;
+      sum += km;
+      box.appendChild(kmRow(s.n, fmtKm(km), false));
+    });
+    box.appendChild(kmRow('Totaal', fmtKm(sum), true));
+  }
+
+  function loadKm() {
+    var cached = [];
+    try { cached = JSON.parse(store('km') || '[]'); } catch (e) {}
+    if (cached.length) renderKm(cached);
+    $('kmstatus').className = 'status';
+
+    api({ action: 'totals' }).then(function (res) {
+      if (!res.success) {
+        if (res.code === 'BAD_KEY') { resetKey('Die sleutel klopt niet. Probeer opnieuw.'); return; }
+        throw new Error(res.error || 'Onbekende fout');
+      }
+      store('km', JSON.stringify(res.shoes || []));
+      renderKm(res.shoes || []);
+    }).catch(function (e) {
+      if (!cached.length) {
+        var s = $('kmstatus');
+        s.className = 'status show err';
+        s.innerHTML = '';
+        var t = document.createElement('strong'); t.textContent = 'Kilometers laden mislukt';
+        s.appendChild(t); s.appendChild(document.createTextNode(e.message));
+      }
+    });
+  }
+
+  $('tabShoes').onclick = function () { setTab('shoes'); };
+  $('tabKm').onclick = function () { setTab('km'); };
 
   // ---------- acties ----------
   function loadShoes() {
