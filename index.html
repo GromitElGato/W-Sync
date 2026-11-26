@@ -103,13 +103,17 @@
   }
   .field:focus { outline: 5px solid var(--orange); outline-offset: 4px; }
   .go.static { position: static; }
-  .link {
-    appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 10px 0; cursor: pointer;
-    font: inherit; font-weight: 800; font-size: 1.15rem; color: var(--ink); opacity: .65;
-    text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 5px;
+  .chip {
+    appearance: none; -webkit-appearance: none; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 12px;
+    background: var(--paper); border: 4px solid var(--ink); border-radius: 14px; padding: 10px 16px;
+    color: var(--ink); font: inherit; font-weight: 800; font-size: 1.1rem;
+    box-shadow: 0 4px 0 var(--ink);
   }
-  .link:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; opacity: 1; }
-  .more { margin-top: 16px; }
+  .chip .arr { font-size: 1.4rem; font-weight: 900; line-height: 1; }
+  .chip:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+  .chip:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
+  .more { margin-top: 22px; }
   .kmrow {
     display: flex; justify-content: space-between; align-items: center; gap: 18px;
     background: var(--paper); border: 5px solid var(--ink); border-radius: 18px;
@@ -134,11 +138,11 @@
     </div>
     <div class="status" id="status" role="status" aria-live="polite"></div>
     <div class="last" id="last"></div>
-    <div class="more"><button class="link" id="goKm" type="button">Kilometers per schoen ›</button></div>
+    <div class="more"><button class="chip" id="goKm" type="button">Kilometers per schoen <span class="arr" aria-hidden="true">→</span></button></div>
   </div>
 
   <div id="kmview" hidden>
-    <button class="link" id="backShoes" type="button" style="margin-bottom:18px">‹ Terug</button>
+    <button class="chip" id="backShoes" type="button" style="margin-bottom:24px"><span class="arr" aria-hidden="true">←</span> Terug</button>
     <div id="kmlist"></div>
     <div class="status" id="kmstatus" role="status" aria-live="polite"></div>
   </div>
