@@ -157,6 +157,7 @@
   <div id="kmview" hidden>
     <button class="back" id="backShoes" type="button"><svg viewBox="0 0 36 26" fill="none" stroke="#111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M33.5 13H2.5M13 2.5L2.5 13 13 23.5"/></svg><span>Terug</span></button>
     <div id="kmlist"></div>
+    <div class="last" id="lastWalk"></div>
     <div class="status" id="kmstatus" role="status" aria-live="polite"></div>
   </div>
 </main>
@@ -358,10 +359,19 @@
     });
   }
 
+  function showLastWalk(iso) {
+    var el = $('lastWalk'), m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+    if (!m) { el.textContent = ''; return; }
+    var d = new Date(+m[1], +m[2] - 1, +m[3]);
+    el.textContent = 'Laatste wandeling: ' +
+      d.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
   function loadKm() {
     var cached = [];
     try { cached = JSON.parse(store('km') || '[]'); } catch (e) {}
     if (cached.length) renderKm(cached);
+    showLastWalk(store('kmlast'));
     $('kmstatus').className = 'status';
 
     api({ action: 'totals' }).then(function (res) {
@@ -370,7 +380,9 @@
         throw new Error(res.error || 'Onbekende fout');
       }
       store('km', JSON.stringify(res.shoes || []));
+      store('kmlast', res.last || '');
       renderKm(res.shoes || []);
+      showLastWalk(res.last);
     }).catch(function (e) {
       if (!cached.length) {
         var s = $('kmstatus');
