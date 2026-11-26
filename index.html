@@ -45,7 +45,7 @@
     padding: 24px 22px; font: inherit; font-weight: 900; font-size: 1.5rem;
     line-height: 1.15; min-height: 104px; display: flex; align-items: center; gap: 22px;
     width: var(--w, auto); max-width: 100%;
-    transition: transform .08s, box-shadow .08s, width .25s ease, background .15s;
+    transition: transform .04s, box-shadow .04s, width .12s ease-out, background .08s;
   }
   .shoe[aria-checked="true"] { width: 100%; }
   .shoe:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
@@ -116,10 +116,11 @@
   .go.static { position: static; }
   .back {
     appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 12px 0; cursor: pointer;
-    display: inline-flex; align-items: center; gap: 12px; margin-bottom: 14px;
+    display: inline-flex; align-items: baseline; gap: 12px; margin-bottom: 14px;
     font: inherit; font-weight: 900; font-size: 1.5rem; letter-spacing: .05em; text-transform: uppercase; color: var(--ink);
   }
-  .back .arr { font-size: 1.9rem; line-height: 1; }
+  .back { line-height: 1; }
+  .back svg { height: .77em; width: auto; aspect-ratio: 36 / 26; display: block; flex: none; }
   .back:active { opacity: .6; }
   .back:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
   .kmrow {
@@ -149,7 +150,7 @@
   </div>
 
   <div id="kmview" hidden>
-    <button class="back" id="backShoes" type="button"><span class="arr" aria-hidden="true">←</span> Terug</button>
+    <button class="back" id="backShoes" type="button"><svg viewBox="0 0 36 26" fill="none" stroke="#111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M33.5 13H2.5M13 2.5L2.5 13 13 23.5"/></svg><span>Terug</span></button>
     <div id="kmlist"></div>
     <div class="status" id="kmstatus" role="status" aria-live="polite"></div>
   </div>
@@ -221,8 +222,26 @@
     $('appview').hidden = t !== 'shoes';
     $('bar').hidden = t !== 'shoes';
     $('kmview').hidden = t !== 'km';
-    if (t === 'km') loadKm();
+    if (t === 'km') { fitBack(); loadKm(); }
   }
+
+  // Pijl exact even hoog als de letters van TERUG en met hetzelfde middelpunt,
+  // ongeacht welk lettertype de telefoon gebruikt.
+  function fitBack() {
+    try {
+      var sp = $('backShoes').querySelector('span'), sv = $('backShoes').querySelector('svg');
+      var cs = getComputedStyle(sp);
+      var c = document.createElement('canvas').getContext('2d');
+      c.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+      var m = c.measureText('TERUG');
+      var asc = m.actualBoundingBoxAscent, desc = m.actualBoundingBoxDescent;
+      if (!(asc > 0)) return;
+      // canvas rekent de rand van de letters ca. 0,5 px ruimer; daar corrigeren we voor
+      sv.style.height = (asc + desc - 1) + 'px';
+      sv.style.transform = 'translateY(' + (desc - 0.75) + 'px)';
+    } catch (e) {}
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitBack);
 
   function showApp() {
     $('setup').hidden = true;
