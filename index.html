@@ -118,7 +118,6 @@
     padding: 22px; margin-bottom: 18px; font-weight: 900; font-size: 1.4rem; line-height: 1.15;
   }
   .kmrow .v { white-space: nowrap; }
-  .kmrow.total { background: var(--orange); margin-top: 28px; box-shadow: 0 7px 0 var(--ink); font-size: 1.6rem; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -296,9 +295,9 @@
     return n.toLocaleString('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' km';
   }
 
-  function kmRow(name, text, total) {
+  function kmRow(name, text) {
     var r = document.createElement('div');
-    r.className = 'kmrow' + (total ? ' total' : '');
+    r.className = 'kmrow';
     var a = document.createElement('span'); a.textContent = name;
     var b = document.createElement('span'); b.className = 'v'; b.textContent = text;
     r.appendChild(a); r.appendChild(b);
@@ -308,13 +307,9 @@
   function renderKm(list) {
     var box = $('kmlist');
     box.innerHTML = '';
-    var sum = 0;
     list.forEach(function (s) {
-      var km = Number(s.km) || 0;
-      sum += km;
-      box.appendChild(kmRow(s.n, fmtKm(km), false));
+      box.appendChild(kmRow(s.n, fmtKm(Number(s.km) || 0)));
     });
-    box.appendChild(kmRow('Totaal', fmtKm(sum), true));
   }
 
   function loadKm() {
