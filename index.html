@@ -40,6 +40,8 @@
   .shoes { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
   html, button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   html, body { overscroll-behavior: none; }
+  /* Past alles op één scherm, dan staat scrollen (en de bounce) helemaal uit */
+  html.lock, html.lock body { overflow: hidden; touch-action: none; }
   .shoe {
     appearance: none; -webkit-appearance: none; text-align: left; cursor: pointer;
     background: var(--paper); color: var(--ink);
@@ -231,6 +233,15 @@
 
   // Pijl exact even hoog als de letters van TERUG en met hetzelfde middelpunt,
   // ongeacht welk lettertype de telefoon gebruikt.
+  function fitScroll() {
+    var de = document.documentElement;
+    de.classList.remove('lock');
+    if (de.scrollHeight <= window.innerHeight + 1) de.classList.add('lock');
+  }
+  if (window.ResizeObserver) new ResizeObserver(fitScroll).observe(document.body);
+  window.addEventListener('resize', fitScroll);
+  fitScroll();
+
   function fitBack() {
     try {
       var sp = $('backShoes').querySelector('span'), sv = $('backShoes').querySelector('svg');
