@@ -114,16 +114,14 @@
   }
   .field:focus { outline: 5px solid var(--orange); outline-offset: 4px; }
   .go.static { position: static; }
-  .chip {
-    appearance: none; -webkit-appearance: none; cursor: pointer;
-    display: inline-flex; align-items: center; gap: 12px;
-    background: var(--paper); border: 4px solid var(--ink); border-radius: 14px; padding: 10px 16px;
-    color: var(--ink); font: inherit; font-weight: 800; font-size: 1.1rem;
-    box-shadow: 0 4px 0 var(--ink);
+  .back {
+    appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 12px 0; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 12px; margin-bottom: 14px;
+    font: inherit; font-weight: 900; font-size: 1.5rem; letter-spacing: .05em; text-transform: uppercase; color: var(--ink);
   }
-  .chip .arr { font-size: 1.4rem; font-weight: 900; line-height: 1; }
-  .chip:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
-  .chip:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
+  .back .arr { font-size: 1.9rem; line-height: 1; }
+  .back:active { opacity: .6; }
+  .back:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
   .kmrow {
     display: flex; justify-content: space-between; align-items: center; gap: 18px;
     background: var(--paper); border: 5px solid var(--ink); border-radius: 18px;
@@ -151,7 +149,7 @@
   </div>
 
   <div id="kmview" hidden>
-    <button class="chip" id="backShoes" type="button" style="margin-bottom:24px"><span class="arr" aria-hidden="true">←</span> Terug</button>
+    <button class="back" id="backShoes" type="button"><span class="arr" aria-hidden="true">←</span> Terug</button>
     <div id="kmlist"></div>
     <div class="status" id="kmstatus" role="status" aria-live="polite"></div>
   </div>
