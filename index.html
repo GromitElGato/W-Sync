@@ -152,9 +152,11 @@
     box-shadow: 0 4px 0 var(--ink);
   }
   .open svg { width: 18px; height: 18px; display: block; }
-  .open.more { display: flex; margin: 8px auto 0; padding: 16px 26px; font: inherit; font-weight: 900; font-size: 1.15rem; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; }
+  .morerow { display: flex; justify-content: center; gap: 14px; margin-top: 8px; }
+  .open.more { display: flex; margin: 0; padding: 16px 26px; font: inherit; font-weight: 900; font-size: 1.15rem; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; }
   .open:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
   .open:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
+  .open.more.up { padding: 16px 20px; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -444,19 +446,36 @@
     var box = $('walklist'); box.innerHTML = '';
     var n = Math.min(walkData.length, walkShown);
     for (var i = 0; i < n; i++) { var c = walkCard(walkData[i]); if (c) box.appendChild(c); }
-    if (walkData.length > n) {
-      var b = document.createElement('button');
-      b.className = 'open more'; b.type = 'button';
-      b.appendChild(document.createTextNode('Meer laden'));
+    var more = walkData.length > n, upBtn = n > WALKS_STEP;
+    if (more || upBtn) {
+      var row = document.createElement('div'); row.className = 'morerow';
       var ns = 'http://www.w3.org/2000/svg';
-      var svg = document.createElementNS(ns, 'svg');
-      svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', '#111');
-      svg.setAttribute('stroke-width', '4'); svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
-      svg.setAttribute('aria-hidden', 'true');
-      var path = document.createElementNS(ns, 'path'); path.setAttribute('d', 'M12 4v15M5 13l7 7 7-7');
-      svg.appendChild(path); b.appendChild(svg);
-      b.onclick = function () { walkShown += WALKS_STEP; renderWalks(); };
-      box.appendChild(b);
+      function arrow(d) {
+        var svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', '#111');
+        svg.setAttribute('stroke-width', '4'); svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
+        svg.setAttribute('aria-hidden', 'true');
+        var path = document.createElementNS(ns, 'path'); path.setAttribute('d', d);
+        svg.appendChild(path);
+        return svg;
+      }
+      if (more) {
+        var b = document.createElement('button');
+        b.className = 'open more'; b.type = 'button';
+        b.appendChild(document.createTextNode('Meer laden'));
+        b.appendChild(arrow('M12 4v15M5 13l7 7 7-7'));
+        b.onclick = function () { walkShown += WALKS_STEP; renderWalks(); };
+        row.appendChild(b);
+      }
+      if (upBtn) {
+        var u = document.createElement('button');
+        u.className = 'open more up'; u.type = 'button';
+        u.setAttribute('aria-label', 'Terug naar het begin');
+        u.appendChild(arrow('M12 20V5M5 11l7-7 7 7'));
+        u.onclick = function () { window.scrollTo({ top: 0, behavior: 'smooth' }); };
+        row.appendChild(u);
+      }
+      box.appendChild(row);
     }
   }
 
