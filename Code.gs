@@ -6,9 +6,8 @@ function onOpen() {
     .addItem('Installeer wijzigingstrigger', 'installeerOnChangeTrigger')
     .addToUi();
 
-  SpreadsheetApp.getActive().getSheets().forEach(function(sheet) {
-    updateShoesDistance(sheet);
-  });
+  // Schoenentotalen over alle jaartabbladen in één keer herberekenen.
+  updateShoesDistance();
 }
 
 
@@ -38,10 +37,7 @@ function onChange(e) {
   const t = e.changeType;
 
   if (t === 'REMOVE_ROW' || t === 'INSERT_ROW' || t === 'EDIT' || t === 'OTHER') {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('2026');
-    if (sheet) {
-      updateShoesDistance(sheet);
-    }
+    updateShoesDistance();
   }
 }
 
@@ -93,19 +89,32 @@ function processRow(sheet, row) {
 
 
 /*
+ * Geeft alle jaartabbladen terug (2026, 2027, ...).
+ */
+function yearSheets_(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+
+  return ss.getSheets().filter(function(sh) {
+    return /^\d{4}$/.test(sh.getName());
+  });
+}
+
+
+/*
  * Bereken de kilometerstand per schoen.
  *
- * Historische kilometerstanden vóór de initialisatie blijven onaangeroerd.
- * Alleen activiteiten vanaf de opgeslagen startregel worden meegerekend.
+ * Totaal per schoen = basisstand (eenmalig opgeslagen bij de initialisatie)
+ *   + wandelingen in het startjaar vanaf de opgeslagen startregel
+ *   + alle wandelingen in latere jaartabbladen (2027, 2028, ...).
+ * Jaartabbladen van vóór het startjaar worden niet meegeteld, zodat
+ * historische kilometerstanden onaangeroerd blijven.
  * BLANCO wordt nooit als schoen meegerekend.
+ *
+ * Met een tabblad als argument (bijv. vanuit onEdit) wordt alleen herberekend
+ * als dat een jaartabblad is. Zonder argument wordt altijd herberekend.
  */
 function updateShoesDistance(sheet) {
-  if (!sheet) {
-    sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  }
-
-  // Alleen tabblad 2026 gebruiken voor schoenen.
-  if (sheet.getName() !== '2026') return;
+  if (sheet && !/^\d{4}$/.test(sheet.getName())) return;
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const shoesSheet = ss.getSheetByName('Schoenen');
@@ -118,19 +127,31 @@ function updateShoesDistance(sheet) {
   if (!baseData) return;
 
   const baseKm = JSON.parse(baseData);
-  const startRow = Number(properties.getProperty('SCHOENEN_START_RIJ_2026')) || 2;
-  const lastRow = sheet.getLastRow();
-  const shoeLastRow = shoesSheet.getLastRow();
 
+  // Bestaande installaties hebben alleen SCHOENEN_START_RIJ_2026: startjaar is dan 2026.
+  const startYear = Number(properties.getProperty('SCHOENEN_START_JAAR')) || 2026;
+  const startRow =
+    Number(properties.getProperty('SCHOENEN_START_RIJ')) ||
+    Number(properties.getProperty('SCHOENEN_START_RIJ_2026')) ||
+    2;
+
+  const shoeLastRow = shoesSheet.getLastRow();
   if (shoeLastRow < 2) return;
 
   const shoes = shoesSheet.getRange(2, 1, shoeLastRow - 1, 2).getValues();
 
-  // Nieuwe kilometers berekenen
+  // Nieuwe kilometers berekenen over alle relevante jaartabbladen
   const addedKm = {};
 
-  if (lastRow >= startRow) {
-    const activities = sheet.getRange(startRow, 3, lastRow - startRow + 1, 3).getValues();
+  yearSheets_(ss).forEach(function(yearSheet) {
+    const year = Number(yearSheet.getName());
+    if (year < startYear) return;
+
+    const firstRow = (year === startYear) ? startRow : 2;
+    const lastRow = yearSheet.getLastRow();
+    if (lastRow < firstRow) return;
+
+    const activities = yearSheet.getRange(firstRow, 3, lastRow - firstRow + 1, 3).getValues();
 
     activities.forEach(function(row) {
       const distanceMeters = Number(row[0]) || 0;
@@ -142,7 +163,7 @@ function updateShoesDistance(sheet) {
       if (!addedKm[shoeName]) addedKm[shoeName] = 0;
       addedKm[shoeName] += distanceMeters / 1000;
     });
-  }
+  });
 
   // Basisstand + nieuwe kilometers
   const result = shoes.map(function(row) {
@@ -411,6 +432,8 @@ function toonAppSleutel() {
 
 
 function doPost(e) {
+  let lock = null;
+
   try {
     const data = JSON.parse(e.postData.contents);
     const properties = PropertiesService.getScriptProperties();
@@ -418,16 +441,6 @@ function doPost(e) {
 
     if (!data.token || data.token !== expectedToken) {
       return createJsonResponse({ success: false, error: 'Ongeldige synchronisatietoken.' });
-    }
-
-    const sheetName = data.sheet || '2026';
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
-
-    if (!sheet) {
-      return createJsonResponse({
-        success: false,
-        error: 'Werkblad "' + sheetName + '" bestaat niet.'
-      });
     }
 
     const activityId = String(data.activity_id || '');
@@ -461,9 +474,18 @@ function doPost(e) {
       });
     }
 
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    // ---------------- SLOT ----------------
+    // Slechts één aanvraag tegelijk mag de historiek controleren en de rij toevoegen.
+    // Zo kan dezelfde wandeling niet dubbel in de sheet komen als er twee aanvragen
+    // tegelijk binnenkomen (bijvoorbeeld bij dubbel starten).
+
+    lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+
     // ---------------- GARMIN HISTORIEK ----------------
 
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
     let historySheet = ss.getSheetByName('GarminHistoriek');
 
     if (!historySheet) {
@@ -487,6 +509,31 @@ function doPost(e) {
           activity_id: activityId
         });
       }
+    }
+
+    // ---------------- WERKBLAD ----------------
+    // Standaard het jaartabblad van de wandeling (2026, 2027, ...).
+    // Een jaartabblad dat nog niet bestaat wordt aangemaakt op basis van het vorige jaar.
+    // Een expliciet meegestuurde naam die geen jaartal is (bijv. een testblad) wordt gebruikt zoals opgegeven.
+
+    let sheetName = String(data.sheet || '').trim();
+
+    if (!sheetName || /^\d{4}$/.test(sheetName)) {
+      sheetName = Utilities.formatDate(date, ss.getSpreadsheetTimeZone(), 'yyyy');
+    }
+
+    let sheet = ss.getSheetByName(sheetName);
+
+    if (!sheet && /^\d{4}$/.test(sheetName)) {
+      maakNieuwJaarTab(sheetName);
+      sheet = ss.getSheetByName(sheetName);
+    }
+
+    if (!sheet) {
+      return createJsonResponse({
+        success: false,
+        error: 'Werkblad "' + sheetName + '" bestaat niet.'
+      });
     }
 
     // ---------------- GESELECTEERDE SCHOEN ----------------
@@ -558,6 +605,12 @@ function doPost(e) {
 
     historySheet.appendRow([activityId]);
 
+    // Alles wegschrijven en het slot vrijgeven vóór het (tragere) WhatsApp-bericht,
+    // zodat een volgende aanvraag de nieuwe historiek meteen ziet.
+    SpreadsheetApp.flush();
+    lock.releaseLock();
+    lock = null;
+
     // ---------------- WHATSAPP ----------------
 
     const km = (Math.round(distance) / 1000).toFixed(2);
@@ -570,11 +623,18 @@ function doPost(e) {
       success: true,
       added: true,
       row: newRow,
+      sheet: sheetName,
       activity_id: activityId
     });
 
   } catch (error) {
     return createJsonResponse({ success: false, error: error.toString() });
+
+  } finally {
+    // Slot ook vrijgeven als er iets misgaat of we eerder terugkeren.
+    if (lock) {
+      try { lock.releaseLock(); } catch (err) {}
+    }
   }
 }
 
@@ -595,11 +655,25 @@ function stuurWhatsAppNaGarmin(km) {
 }
 
 
+/*
+ * Green API-gegevens staan NIET in de code, maar in Script Properties
+ * (Apps Script > Projectinstellingen > Scripteigenschappen):
+ *   GREEN_API_INSTANCE_ID  = instance-ID
+ *   GREEN_API_TOKEN        = apiTokenInstance
+ *   WHATSAPP_CHAT_ID       = groeps-ID (eindigt op @g.us)
+ */
 function sendWhatsAppToGroup(message) {
-  // WERKENDE GREEN API-GEGEVENS
-  const instanceId = '7105245521';
-  const token = '529c3b363f4a4ca48563ce003d47622d057998facdf44b8793';
-  const chatId = '120363419720592353@g.us';
+  const properties = PropertiesService.getScriptProperties();
+  const instanceId = String(properties.getProperty('GREEN_API_INSTANCE_ID') || '').trim();
+  const token = String(properties.getProperty('GREEN_API_TOKEN') || '').trim();
+  const chatId = String(properties.getProperty('WHATSAPP_CHAT_ID') || '').trim();
+
+  if (!instanceId || !token || !chatId) {
+    throw new Error(
+      'Green API-gegevens ontbreken in Script Properties ' +
+      '(GREEN_API_INSTANCE_ID, GREEN_API_TOKEN, WHATSAPP_CHAT_ID).'
+    );
+  }
 
   const url =
     'https://api.green-api.com/waInstance' + instanceId + '/sendMessage/' + token;
@@ -661,11 +735,8 @@ function maakNieuwJaarTab(jaar) {
 
 
 function autoUpdateAllSheets() {
-  SpreadsheetApp.getActiveSpreadsheet().getSheets().forEach(function(sheet) {
-    if (/^\d{4}$/.test(sheet.getName())) {
-      updateShoesDistance(sheet);
-    }
-  });
+  // Berekent de schoenentotalen over alle jaartabbladen.
+  updateShoesDistance();
 }
 
 
@@ -731,15 +802,25 @@ function initialiseerGarminHistoriek() {
 }
 
 
+/*
+ * Eenmalig uitvoeren (of opnieuw bij een nieuwe start).
+ * Slaat de huidige kilometerstanden op als basisstand en onthoudt vanaf welk jaartabblad
+ * en welke rij nieuwe activiteiten meetellen: het meest recente jaartabblad, vanaf de
+ * eerste lege rij.
+ */
 function initialiseerSchoenenTracking() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName('2026');
   const shoesSheet = ss.getSheetByName('Schoenen');
 
-  if (!sheet || !shoesSheet) {
-    throw new Error('Tabblad 2026 of Schoenen ontbreekt.');
+  const sheets = yearSheets_(ss).sort(function(a, b) {
+    return Number(b.getName()) - Number(a.getName());
+  });
+
+  if (!sheets.length || !shoesSheet) {
+    throw new Error('Een jaartabblad (bijv. 2026) of het tabblad Schoenen ontbreekt.');
   }
 
+  const sheet = sheets[0];
   const properties = PropertiesService.getScriptProperties();
   const shoeLastRow = shoesSheet.getLastRow();
 
@@ -760,12 +841,13 @@ function initialiseerSchoenenTracking() {
   // Huidige kilometerstanden worden eenmalig als basisstand opgeslagen.
   properties.setProperty('SCHOENEN_BASISSTAND', JSON.stringify(baseKm));
 
-  // Alles wat nu al in 2026 staat, beschouwen we als bestaande data.
-  properties.setProperty('SCHOENEN_START_RIJ_2026', String(sheet.getLastRow() + 1));
+  // Alles wat nu al in het meest recente jaartabblad staat, beschouwen we als bestaande data.
+  properties.setProperty('SCHOENEN_START_JAAR', sheet.getName());
+  properties.setProperty('SCHOENEN_START_RIJ', String(sheet.getLastRow() + 1));
 
   Logger.log('Schoenen-tracking geïnitialiseerd.');
   Logger.log('Basisstanden: ' + JSON.stringify(baseKm));
-  Logger.log('Nieuwe activiteiten vanaf rij ' + (sheet.getLastRow() + 1));
+  Logger.log('Nieuwe activiteiten vanaf tabblad ' + sheet.getName() + ', rij ' + (sheet.getLastRow() + 1));
 }
 
 
