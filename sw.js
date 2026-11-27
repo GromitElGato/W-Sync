@@ -1,7 +1,7 @@
 // Garmin Sync - service worker
 // Zorgt dat de app als echte app opent. Nieuwe versies worden automatisch opgehaald
 // zodra er internet is; zonder internet wordt de laatst opgeslagen versie getoond.
-var CACHE = 'garmin-sync-v10';
+var CACHE = 'garmin-sync-v14';
 var FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', function (e) {
