@@ -482,7 +482,12 @@
 
   // Garmin noemt een wandeling meestal "<plaats> Wandelen": haal het soort activiteit eraf, dan blijft de plaats over.
   function placeFrom(name) {
-    var t = String(name || '')
+    var raw = String(name || '').trim();
+    // Generieke namen ("Ochtendwandeling", "Morning Walk", "Avondwandeling") bevatten geen plaats.
+    if (/^(ochtend|voormiddag|middag|namiddag|avond|nacht|lunch|morning|afternoon|evening|night)[\s\-]*(wandeling|wandelen|walk|hike|hiking)?$/i.test(raw)) return '';
+    // Eén samengesteld woord als "Kerstwandeling" is ook geen plaats.
+    if (/^\S+(wandeling|wandelen)$/i.test(raw)) return '';
+    var t = raw
       .replace(/\b(wandelen|wandeling|walking|walk|hiking|hike|lopen)\b/gi, '')
       .replace(/^[\s\-\u2013\u2014\u00B7,:]+|[\s\-\u2013\u2014\u00B7,:]+$/g, '')
       .replace(/\s{2,}/g, ' ');
