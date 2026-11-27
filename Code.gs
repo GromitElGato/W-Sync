@@ -240,8 +240,8 @@ function getLastWalkDate() {
 
 
 /*
- * Alle wandelingen uit de jaartabbladen (2026, 2027, ...), nieuwste eerst.
- * A = datum + tijd, C = afstand in meter, F = link (Garmin of Strava).
+ * De 10 meest recente wandelingen uit de jaartabbladen (2026, 2027, ...), nieuwste eerst.
+ * A = datum + tijd, B = activiteitsnaam, C = afstand in meter, F = link (Garmin of Strava).
  */
 function getWalks() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -266,6 +266,7 @@ function getWalks() {
         t: date.getTime(),
         d: Utilities.formatDate(date, tz, "yyyy-MM-dd'T'HH:mm"),
         m: Math.round(Number(vals[i][2]) || 0),
+        n: String(vals[i][1] || '').trim(),
         u: linkFromRichText_(rich[i][0])
       });
     }
@@ -273,7 +274,8 @@ function getWalks() {
 
   out.sort(function(a, b) { return b.t - a.t; });
 
-  return out.map(function(w) { return { d: w.d, m: w.m, u: w.u }; });
+  // Alleen de 10 meest recente wandelingen
+  return out.slice(0, 10).map(function(w) { return { d: w.d, m: w.m, n: w.n, u: w.u }; });
 }
 
 

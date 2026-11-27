@@ -89,6 +89,7 @@
     box-shadow: 0 7px 0 var(--ink); transition: transform .08s, box-shadow .08s;
   }
   .sq svg { width: 58px; height: 58px; display: block; }
+  #goKm { font: inherit; font-weight: 900; font-size: 2.1rem; letter-spacing: .02em; color: var(--ink); }
   .sq:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
   .sq:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
   .go:active:not([disabled]) { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
@@ -141,6 +142,8 @@
   }
   .walk .d { font-weight: 900; font-size: 1.3rem; line-height: 1.2; }
   .walk .m { font-weight: 800; font-size: 1.15rem; margin-top: 6px; }
+  .walk .p { display: flex; align-items: center; gap: 7px; margin-top: 5px; font-weight: 700; font-size: 1.05rem; }
+  .walk .p svg { width: 13px; height: 17px; flex: none; display: block; }
   .open {
     flex: none; display: inline-flex; align-items: center; gap: 8px;
     background: var(--orange); color: var(--ink); text-decoration: none;
@@ -150,12 +153,7 @@
   }
   .open svg { width: 18px; height: 18px; display: block; }
   .open:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
-  .open:focus-visible, .moreb:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
-  .moreb {
-    appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 14px 0; cursor: pointer;
-    font: inherit; font-weight: 900; font-size: 1.3rem; letter-spacing: .05em; text-transform: uppercase; color: var(--ink);
-  }
-  .moreb:active { opacity: .6; }
+  .open:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -191,13 +189,7 @@
 <div class="bar" id="bar">
   <div class="barin">
     <button class="go" id="go" disabled>Synchroniseren</button>
-    <button class="sq" id="goKm" type="button" aria-label="Kilometers per schoen">
-      <svg viewBox="0 0 48 48" fill="#111" aria-hidden="true">
-        <rect x="4" y="25" width="11" height="19" rx="2.5"/>
-        <rect x="18.5" y="6" width="11" height="38" rx="2.5"/>
-        <rect x="33" y="16" width="11" height="28" rx="2.5"/>
-      </svg>
-    </button>
+    <button class="sq" id="goKm" type="button" aria-label="Kilometers per schoen">KM</button>
     <button class="sq" id="goWalks" type="button" aria-label="Alle wandelingen">
       <svg viewBox="0 0 48 48" fill="#111" aria-hidden="true">
         <circle cx="7.5" cy="11" r="4.5"/><rect x="18" y="7" width="27" height="8" rx="4"/>
@@ -268,7 +260,7 @@
     document.body.classList.toggle('kmv', t !== 'shoes');
     if (t !== 'shoes') fitBack();
     if (t === 'km') loadKm();
-    if (t === 'walks') { walkShown = 40; loadWalks(); }
+    if (t === 'walks') loadWalks();
   }
 
   // Pijl exact even hoog als de letters van TERUG en met hetzelfde middelpunt,
@@ -399,7 +391,7 @@
   }
 
   // ---------- wandelingen ----------
-  var walkShown = 40, walkData = [];
+  var WALKS_MAX = 10, walkData = [];
 
   function parseWalk(str) {
     var m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(str || '');
@@ -415,6 +407,15 @@
     return { u: u, n: h.indexOf('strava') >= 0 ? 'Strava' : h.indexOf('garmin') >= 0 ? 'Garmin' : 'Link' };
   }
 
+  // Garmin noemt een wandeling meestal "<plaats> Wandelen": haal het soort activiteit eraf, dan blijft de plaats over.
+  function placeFrom(name) {
+    var t = String(name || '')
+      .replace(/\b(wandelen|wandeling|walking|walk|hiking|hike|lopen)\b/gi, '')
+      .replace(/^[\s\-\u2013\u2014\u00B7,:]+|[\s\-\u2013\u2014\u00B7,:]+$/g, '')
+      .replace(/\s{2,}/g, ' ');
+    return t.length > 1 && t.length <= 40 ? t : '';
+  }
+
   function walkCard(w) {
     var pw = parseWalk(w.d);
     if (!pw) return null;
@@ -425,7 +426,21 @@
     var m = document.createElement('div'); m.className = 'm';
     var km = (Number(w.m) / 1000).toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' km';
     m.textContent = (pw.time ? pw.time + ' \u00B7 ' : '') + km;
-    left.appendChild(d); left.appendChild(m); card.appendChild(left);
+    left.appendChild(d); left.appendChild(m);
+    var place = placeFrom(w.n);
+    if (place) {
+      var pl = document.createElement('div'); pl.className = 'p';
+      var ns0 = 'http://www.w3.org/2000/svg';
+      var pin = document.createElementNS(ns0, 'svg');
+      pin.setAttribute('viewBox', '0 0 24 32'); pin.setAttribute('fill', '#111'); pin.setAttribute('aria-hidden', 'true');
+      var pp = document.createElementNS(ns0, 'path');
+      pp.setAttribute('d', 'M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20C24 5.4 18.6 0 12 0zm0 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10z');
+      pp.setAttribute('fill-rule', 'evenodd');
+      pin.appendChild(pp); pl.appendChild(pin);
+      var pt = document.createElement('span'); pt.textContent = place; pl.appendChild(pt);
+      left.appendChild(pl);
+    }
+    card.appendChild(left);
 
     var li = linkInfo(w.u);
     if (li) {
@@ -446,14 +461,7 @@
 
   function renderWalks() {
     var box = $('walklist'); box.innerHTML = '';
-    var n = Math.min(walkData.length, walkShown);
-    for (var i = 0; i < n; i++) { var c = walkCard(walkData[i]); if (c) box.appendChild(c); }
-    if (walkData.length > n) {
-      var b = document.createElement('button');
-      b.className = 'moreb'; b.type = 'button'; b.textContent = 'Meer tonen';
-      b.onclick = function () { walkShown += 40; renderWalks(); };
-      box.appendChild(b);
-    }
+    walkData.slice(0, WALKS_MAX).forEach(function (w) { var c = walkCard(w); if (c) box.appendChild(c); });
   }
 
   function loadWalks() {
@@ -467,7 +475,7 @@
         if (res.code === 'BAD_KEY') { resetKey('Die sleutel klopt niet. Probeer opnieuw.'); return; }
         throw new Error(res.error || 'Onbekende fout');
       }
-      walkData = res.walks || [];
+      walkData = (res.walks || []).slice(0, WALKS_MAX);
       store('walks', JSON.stringify(walkData));
       renderWalks();
     }).catch(function (e) {
