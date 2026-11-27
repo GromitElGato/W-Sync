@@ -168,13 +168,22 @@
   .tab[aria-selected="true"] { background: var(--orange); }
   .tab:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
   .tab:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
-  .mnav { display: flex; align-items: stretch; gap: 12px; margin-bottom: 26px; }
-  .mnav .sq { flex: 0 0 88px; width: 88px; min-height: 88px; }
-  .sq[disabled] { background: #d9d9d9; border-color: #8a8a8a; box-shadow: 0 7px 0 #8a8a8a; cursor: default; }
+  .mnav {
+    display: flex; align-items: stretch; margin-bottom: 26px; overflow: hidden;
+    background: var(--ink); color: #fff; border: 5px solid var(--ink); border-radius: 18px;
+    box-shadow: 0 7px 0 var(--ink);
+  }
+  .mnav .arr {
+    flex: 0 0 96px; min-height: 88px; display: grid; place-items: center; padding: 0;
+    background: none; border: 0; color: #fff; cursor: pointer;
+  }
+  .mnav .arr svg { width: 40px; height: 40px; display: block; }
+  .mnav .arr:active:not([disabled]) { background: #333; }
+  .mnav .arr[disabled] { opacity: .3; cursor: default; }
+  .mnav .arr:focus-visible { outline: 5px solid var(--orange); outline-offset: -5px; }
   .mt {
     flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; text-align: center;
-    background: var(--paper); border: 5px solid var(--ink); border-radius: 18px; padding: 8px 12px;
-    font-weight: 900; font-size: 1.5rem; text-transform: capitalize;
+    padding: 8px 4px; font-weight: 900; font-size: 1.5rem; text-transform: capitalize;
   }
   .empty { font-weight: 800; font-size: 1.2rem; text-align: center; padding: 20px 0; }
   [hidden] { display: none !important; }
@@ -200,9 +209,9 @@
 
   <div id="walkview" hidden>
     <div class="mnav">
-      <button class="sq" id="mprev" type="button" aria-label="Vorige maand"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12H5M11 5l-7 7 7 7"/></svg></button>
+      <button class="arr" id="mprev" type="button" aria-label="Vorige maand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12H5M11 5l-7 7 7 7"/></svg></button>
       <div class="mt" id="mtitle" aria-live="polite"></div>
-      <button class="sq" id="mnext" type="button" aria-label="Volgende maand"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 5l7 7-7 7"/></svg></button>
+      <button class="arr" id="mnext" type="button" aria-label="Volgende maand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 5l7 7-7 7"/></svg></button>
     </div>
     <div id="walklist"></div>
     <div class="status" id="walkstatus" role="status" aria-live="polite"></div>
