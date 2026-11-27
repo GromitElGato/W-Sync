@@ -51,7 +51,7 @@
     padding: 24px 22px; font: inherit; font-weight: 900; font-size: 1.5rem;
     line-height: 1.15; min-height: 104px; display: flex; align-items: center; gap: 22px;
     width: var(--w, auto); max-width: 100%;
-    position: relative; overflow: hidden;
+    position: relative; overflow: hidden; isolation: isolate;
     transition: transform .04s, box-shadow .04s, width .08s ease-out, background .04s;
   }
   .shoe > * { position: relative; z-index: 1; }
@@ -76,7 +76,7 @@
   .skeleton { width: 100%; height: 104px; border-radius: 18px; border: 5px solid #e3e3e3; }
 
   .bar {
-    position: fixed; left: 0; right: 0; bottom: 0; background: var(--paper);
+    position: fixed; z-index: 10; left: 0; right: 0; bottom: 0; background: var(--paper);
     border-top: 6px solid var(--ink);
     padding: 22px 24px calc(22px + env(safe-area-inset-bottom, 0px));
   }
@@ -108,10 +108,10 @@
   /* Ronde synchroniseerknop naast de titel: vult van onder naar boven terwijl je indrukt */
   .sync {
     flex: none; position: relative; overflow: hidden; padding: 0; cursor: pointer;
-    width: 112px; height: 112px; border-radius: 50%;
+    width: 88px; height: 88px; border-radius: 50%;
     display: grid; place-items: center;
     background: var(--paper); color: var(--ink);
-    border: 5px solid var(--ink); box-shadow: 0 7px 0 var(--ink);
+    border: 4px solid var(--ink); box-shadow: 0 5px 0 var(--ink);
     -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
     transition: transform .08s, box-shadow .08s;
   }
@@ -122,11 +122,13 @@
   .sync.holding .fill { animation: hold 3s linear forwards; }
   @keyframes hold { to { transform: scaleY(1); } }
   .sync .lbl { position: relative; display: grid; place-items: center; }
-  .sync svg { width: 74px; height: 74px; display: block; }
-  .sync .spin { width: 44px; height: 44px; margin: 0; }
-  .sync:active:not([disabled]) { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
+  .sync svg { width: 58px; height: 58px; display: block; }
+  /* Tijdens het synchroniseren draait het icoon mee in de richting van de pijlen (tegen de klok in) */
+  .sync.busy .lbl { animation: rr .9s linear infinite; }
+  @keyframes rr { to { transform: rotate(-360deg); } }
+  .sync:active:not([disabled]) { transform: translateY(3px); box-shadow: 0 2px 0 var(--ink); }
   .sync:focus-visible { outline: 5px solid var(--paper); outline-offset: 4px; }
-  .sync[disabled] { background: #d9d9d9; color: #555; box-shadow: 0 7px 0 #8a8a8a; border-color: #8a8a8a; cursor: default; }
+  .sync[disabled] { background: #d9d9d9; color: #555; box-shadow: 0 5px 0 #8a8a8a; border-color: #8a8a8a; cursor: default; }
 
   .spin {
     display: inline-block; flex: none; width: 26px; height: 26px; margin-right: 16px;
@@ -135,13 +137,12 @@
     animation: r .8s linear infinite;
   }
   @keyframes r { to { transform: rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2.5s; } .shoe { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .spin, .sync.busy .lbl { animation-duration: 2.5s; } .shoe { transition: none; } }
 
   .status { margin-top: 34px; border-radius: 18px; padding: 22px 24px; display: none; font-size: 1.25rem; font-weight: 700; border: 5px solid; }
   .status.show { display: block; }
   .status.ok { background: var(--ok-bg); color: var(--ok); border-color: var(--ok-line); }
   .status.err { background: var(--err-bg); color: var(--err); border-color: var(--err-line); }
-  .status.info { background: var(--paper); color: var(--ink); border-color: var(--ink); }
   .status strong { display: block; margin-bottom: 4px; font-size: 1.45rem; font-weight: 900; }
   .last:empty { display: none; }
   .last { display: inline-block; background: var(--paper); border: 4px solid var(--ink); border-radius: 14px; padding: 10px 16px; color: var(--ink); font-weight: 800; font-size: 1.1rem; margin-top: 28px; }
@@ -627,7 +628,7 @@
     busy = true;
     var btn = $('go');
     btn.disabled = true;
-    $('golbl').innerHTML = '<span class="spin"></span>';
+    btn.classList.add('busy');
     btn.setAttribute('aria-label', 'Bezig met synchroniseren');
     $('status').className = 'status';
     api({ action: 'sync', shoe: selected }).then(function (res) {
@@ -645,7 +646,7 @@
     }).then(function () {
       busy = false;
       btn.disabled = cooldown;
-      $('golbl').innerHTML = SYNC_ICON;
+      btn.classList.remove('busy');
       btn.setAttribute('aria-label', 'Synchroniseren (houd 3 seconden ingedrukt)');
     });
   }
@@ -667,7 +668,6 @@
     if (!holdT) return;
     clearTimeout(holdT); holdT = null;
     holdReset();
-    if (!busy) show('info', 'Houd de knop ingedrukt', 'Houd de knop 3 seconden ingedrukt om te synchroniseren.');
   }
   (function () {
     var g = $('go');
