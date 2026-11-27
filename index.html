@@ -25,7 +25,7 @@
     font: 26px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     padding-bottom: 240px;
   }
-  body.kmv { padding-bottom: 32px; }
+  body.kmv { padding-bottom: 240px; }
   .top {
     background: var(--orange); border-bottom: 8px solid var(--ink);
     padding: calc(44px + env(safe-area-inset-top, 0px)) 24px 34px;
@@ -62,6 +62,7 @@
   .shoe[aria-checked="true"] .dot {
     background: radial-gradient(var(--ink) 0 42%, var(--paper) 46%);
   }
+  .shoe .skm { margin-left: auto; padding-left: 20px; font-size: 1.3rem; font-weight: 900; white-space: nowrap; }
   .shoe small { display: block; font-size: 1.05rem; font-weight: 700; margin-top: 2px; }
   .shoe:focus-visible, .go:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
   .skeleton { width: 100%; height: 104px; border-radius: 18px; border: 5px solid #e3e3e3; }
@@ -91,7 +92,6 @@
     box-shadow: 0 7px 0 var(--ink); transition: transform .08s, box-shadow .08s;
   }
   .sq svg { width: 48px; height: 48px; display: block; }
-  #goKm { font: inherit; font-weight: 800; font-size: 1.6rem; letter-spacing: 0; text-transform: none; color: var(--ink); }
   .sq:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
   .sq:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
   .go .fill {
@@ -129,12 +129,6 @@
   }
   .field:focus { outline: 5px solid var(--orange); outline-offset: 4px; }
   .go.static { position: static; }
-  .kmrow {
-    display: flex; justify-content: space-between; align-items: center; gap: 18px;
-    background: var(--paper); border: 5px solid var(--ink); border-radius: 18px;
-    padding: 22px; margin-bottom: 18px; font-weight: 900; font-size: 1.4rem; line-height: 1.15;
-  }
-  .kmrow .v { white-space: nowrap; }
   .walk {
     background: var(--paper); border: 5px solid var(--ink); border-radius: 18px;
     padding: 18px 20px; margin-bottom: 16px;
@@ -157,6 +151,13 @@
   .open:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
   .open:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
   .open.more.up { padding: 16px 20px; }
+  .go svg { width: 34px; height: 34px; margin-right: 14px; display: block; flex: none; }
+  .month {
+    display: inline-block; margin: 30px 0 14px; padding: 8px 18px;
+    background: var(--ink); color: #fff; border-radius: 12px;
+    font-weight: 900; font-size: 1.05rem; text-transform: uppercase; letter-spacing: .08em;
+  }
+  #walklist > .month:first-child { margin-top: 0; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -177,11 +178,6 @@
     <div class="last" id="last"></div>
   </div>
 
-  <div id="kmview" hidden>
-    <div id="kmlist"></div>
-    <div class="status" id="kmstatus" role="status" aria-live="polite"></div>
-  </div>
-
   <div id="walkview" hidden>
     <div id="walklist"></div>
     <div class="status" id="walkstatus" role="status" aria-live="polite"></div>
@@ -198,7 +194,14 @@
         <circle cx="8" cy="36" r="3.4"/><rect x="18" y="33" width="26" height="6" rx="3"/>
       </svg>
     </button>
-    <button class="sq" id="goKm" type="button" aria-label="Kilometers per schoen">Km's</button>
+  </div>
+</div>
+
+<div class="bar" id="barBack" hidden>
+  <div class="barin">
+    <button class="go" id="goBack" type="button" aria-label="Terug naar schoenen">
+      <span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12H5M11 5l-7 7 7 7"/></svg>Terug</span>
+    </button>
   </div>
 </div>
 
@@ -244,21 +247,20 @@
     $('setupMsg').textContent = msg || 'Voer één keer je sleutel in.';
     $('setup').hidden = false;
     $('appview').hidden = true;
-    $('kmview').hidden = true;
     $('walkview').hidden = true;
     $('bar').hidden = true;
+    $('barBack').hidden = true;
   }
 
   var tab = 'shoes';
   function setTab(t) {
     tab = t;
-    $('lbl').textContent = t === 'shoes' ? 'Kies je schoenen.' : t === 'km' ? 'Kilometers.' : 'Wandelingen.';
+    $('lbl').textContent = t === 'shoes' ? 'Kies je schoenen.' : 'Wandelingen.';
     $('appview').hidden = t !== 'shoes';
     $('bar').hidden = t !== 'shoes';
-    $('kmview').hidden = t !== 'km';
+    $('barBack').hidden = t === 'shoes';
     $('walkview').hidden = t !== 'walks';
     document.body.classList.toggle('kmv', t !== 'shoes');
-    if (t === 'km') loadKm();
     if (t === 'walks') { walkShown = WALKS_STEP; loadWalks(); }
   }
 
@@ -299,6 +301,9 @@
       var dot = document.createElement('span'); dot.className = 'dot';
       var txt = document.createElement('span'); txt.textContent = name;
       b.appendChild(dot); b.appendChild(txt);
+      var skm = document.createElement('span'); skm.className = 'skm';
+      skm.setAttribute('data-shoe', name); skm.textContent = kmText(name);
+      b.appendChild(skm);
       if (name === 'BLANCO') {
         var hint = document.createElement('small');
         hint.textContent = 'telt niet mee';
@@ -356,21 +361,20 @@
     return n.toLocaleString('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' km';
   }
 
-  function kmRow(name, text) {
-    var r = document.createElement('div');
-    r.className = 'kmrow';
-    var a = document.createElement('span'); a.textContent = name;
-    var b = document.createElement('span'); b.className = 'v'; b.textContent = text;
-    r.appendChild(a); r.appendChild(b);
-    return r;
+  var kmMap = {};
+  function kmText(name) {
+    if (name === 'BLANCO' || kmMap[name] === undefined) return '';
+    return fmtKm(kmMap[name]);
   }
-
-  function renderKm(list) {
-    var box = $('kmlist');
-    box.innerHTML = '';
-    list.forEach(function (s) {
-      box.appendChild(kmRow(s.n, fmtKm(Number(s.km) || 0)));
+  function updateShoeKm() {
+    Array.prototype.forEach.call(document.querySelectorAll('.skm'), function (el) {
+      el.textContent = kmText(el.getAttribute('data-shoe'));
     });
+    measure();
+  }
+  function setKmMap(list) {
+    kmMap = {};
+    (list || []).forEach(function (x) { kmMap[x.n] = Number(x.km) || 0; });
   }
 
   // ---------- wandelingen ----------
@@ -445,7 +449,20 @@
   function renderWalks() {
     var box = $('walklist'); box.innerHTML = '';
     var n = Math.min(walkData.length, walkShown);
-    for (var i = 0; i < n; i++) { var c = walkCard(walkData[i]); if (c) box.appendChild(c); }
+    var lastMonth = '';
+    for (var i = 0; i < n; i++) {
+      var c = walkCard(walkData[i]);
+      if (!c) continue;
+      var pw = parseWalk(walkData[i].d);
+      var mk = pw.date.getFullYear() + '-' + pw.date.getMonth();
+      if (mk !== lastMonth) {
+        lastMonth = mk;
+        var h = document.createElement('div'); h.className = 'month';
+        h.textContent = pw.date.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' });
+        box.appendChild(h);
+      }
+      box.appendChild(c);
+    }
     var more = walkData.length > n, upBtn = n > WALKS_STEP;
     if (more || upBtn) {
       var row = document.createElement('div'); row.className = 'morerow';
@@ -504,28 +521,17 @@
     });
   }
 
-  function loadKm() {
-    var cached = [];
-    try { cached = JSON.parse(store('km') || '[]'); } catch (e) {}
-    if (cached.length) renderKm(cached);
-    $('kmstatus').className = 'status';
-
+  function loadTotals() {
+    try { setKmMap(JSON.parse(store('km') || '[]')); } catch (e) {}
     api({ action: 'totals' }).then(function (res) {
       if (!res.success) {
-        if (res.code === 'BAD_KEY') { resetKey('Die sleutel klopt niet. Probeer opnieuw.'); return; }
-        throw new Error(res.error || 'Onbekende fout');
+        if (res.code === 'BAD_KEY') resetKey('Die sleutel klopt niet. Probeer opnieuw.');
+        return;
       }
       store('km', JSON.stringify(res.shoes || []));
-      renderKm(res.shoes || []);
-    }).catch(function (e) {
-      if (!cached.length) {
-        var s = $('kmstatus');
-        s.className = 'status show err';
-        s.innerHTML = '';
-        var t = document.createElement('strong'); t.textContent = 'Kilometers laden mislukt';
-        s.appendChild(t); s.appendChild(document.createTextNode(e.message));
-      }
-    });
+      setKmMap(res.shoes || []);
+      updateShoeKm();
+    }).catch(function () {});
   }
 
   // Elk scherm krijgt een eigen geschiedenisstap, zodat de terugknop van de telefoon (of veeggebaar) werkt.
@@ -538,14 +544,18 @@
   window.addEventListener('popstate', function (e) {
     if (!$('setup').hidden) return;
     var t = e.state && e.state.t;
-    setTab(t === 'km' || t === 'walks' ? t : 'shoes');
+    setTab(t === 'walks' ? t : 'shoes');
     window.scrollTo(0, 0);
   });
-  $('goKm').onclick = function () { openTab('km'); };
+  $('goBack').onclick = function () {
+    if (history.state && history.state.t) history.back();
+    else { setTab('shoes'); window.scrollTo(0, 0); }
+  };
   $('goWalks').onclick = function () { openTab('walks'); };
 
   // ---------- acties ----------
   function loadShoes() {
+    loadTotals();
     var cached = [];
     try { cached = JSON.parse(store('shoes') || '[]'); } catch (e) {}
     if (cached.length) renderShoes(cached);
