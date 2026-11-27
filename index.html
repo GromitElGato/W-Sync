@@ -30,10 +30,10 @@
     background: var(--orange); border-bottom: 8px solid var(--ink);
     padding: calc(44px + env(safe-area-inset-top, 0px)) 24px 34px;
   }
-  .topin { max-width: 680px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+  .topin { min-height: 100px; max-width: 632px; margin: 0 auto; display: flex; align-items: center; justify-content: flex-start; gap: 24px; }
   h2 {
-    flex: 1; min-width: 0; margin: 0; white-space: nowrap;
-    font-size: 3.5rem; line-height: 1.02; font-weight: 900;
+    flex: 0 1 auto; min-width: 0; margin: 0; white-space: nowrap;
+    font-size: 3.3rem; line-height: 1.02; font-weight: 900;
     letter-spacing: -0.02em; color: var(--ink);
   }
   main { max-width: 680px; margin: 0 auto; padding: 32px 24px 0; }
@@ -76,7 +76,7 @@
   .skeleton { width: 100%; height: 104px; border-radius: 18px; border: 5px solid #e3e3e3; }
 
   .bar {
-    position: fixed; z-index: 10; left: 0; right: 0; bottom: 0; background: var(--paper);
+    position: fixed; z-index: 10; left: 0; right: 0; bottom: 0; background: var(--orange);
     border-top: 6px solid var(--ink);
     padding: 22px 24px calc(22px + env(safe-area-inset-bottom, 0px));
   }
@@ -108,7 +108,7 @@
   /* Ronde synchroniseerknop naast de titel: vult van onder naar boven terwijl je indrukt */
   .sync {
     flex: none; position: relative; overflow: hidden; padding: 0; cursor: pointer;
-    width: 88px; height: 88px; border-radius: 50%;
+    width: 132px; height: 100px; border-radius: 50px;
     display: grid; place-items: center;
     background: var(--paper); color: var(--ink);
     border: 4px solid var(--ink); box-shadow: 0 5px 0 var(--ink);
@@ -117,12 +117,12 @@
   }
   .sync .fill {
     position: absolute; inset: 0; background: var(--fill);
-    transform: scaleY(0); transform-origin: center bottom; pointer-events: none;
+    transform: scaleX(0); transform-origin: left center; pointer-events: none;
   }
-  .sync.holding .fill { animation: hold 3s linear forwards; }
-  @keyframes hold { to { transform: scaleY(1); } }
+  .sync.holding .fill { animation: hold 2s linear forwards; }
+  @keyframes hold { to { transform: scaleX(1); } }
   .sync .lbl { position: relative; display: grid; place-items: center; }
-  .sync svg { width: 58px; height: 58px; display: block; }
+  .sync svg { width: 66px; height: 66px; display: block; }
   /* Tijdens het synchroniseren draait het icoon mee in de richting van de pijlen (tegen de klok in) */
   .sync.busy .lbl { animation: rr .9s linear infinite; }
   @keyframes rr { to { transform: rotate(-360deg); } }
@@ -189,7 +189,7 @@
     box-shadow: 0 7px 0 var(--ink); font: inherit; font-weight: 900; font-size: 1.35rem;
     text-transform: uppercase; letter-spacing: .04em; transition: transform .08s, box-shadow .08s;
   }
-  .tab[aria-selected="true"] { background: var(--orange); }
+  .tab[aria-selected="true"] { background: var(--fill); }
   .tab:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
   .tab:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
   .mnav {
@@ -207,7 +207,7 @@
   .mnav .arr:focus-visible { outline: 5px solid var(--orange); outline-offset: -5px; }
   .mt {
     flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; text-align: center;
-    padding: 8px 4px; font-weight: 900; font-size: 1.5rem; text-transform: capitalize;
+    padding: 8px 4px; font-weight: 900; font-size: 2.1rem; text-transform: capitalize;
   }
   .empty { font-weight: 800; font-size: 1.2rem; text-align: center; padding: 20px 0; }
   [hidden] { display: none !important; }
@@ -217,7 +217,7 @@
 <header class="top">
   <div class="topin">
     <h2 id="lbl">Kies je schoenen.</h2>
-    <button class="sync" id="go" type="button" disabled aria-label="Synchroniseren (houd 3 seconden ingedrukt)"><span class="fill"></span><span class="lbl" id="golbl"></span></button>
+    <button class="sync" id="go" type="button" disabled aria-label="Synchroniseren (houd 2 seconden ingedrukt)"><span class="fill"></span><span class="lbl" id="golbl"></span></button>
   </div>
 </header>
 <main>
@@ -647,12 +647,12 @@
       busy = false;
       btn.disabled = cooldown;
       btn.classList.remove('busy');
-      btn.setAttribute('aria-label', 'Synchroniseren (houd 3 seconden ingedrukt)');
+      btn.setAttribute('aria-label', 'Synchroniseren (houd 2 seconden ingedrukt)');
     });
   }
 
-  // Synchroniseren start pas nadat je de knop 3 seconden ingedrukt houdt.
-  var HOLD_MS = 3000, holdT = null;
+  // Synchroniseren start pas nadat je de knop 2 seconden ingedrukt houdt.
+  var HOLD_MS = 2000, holdT = null;
 
   function holdReset() {
     $('go').classList.remove('holding');
