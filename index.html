@@ -521,8 +521,8 @@
       var appHref = li.n === 'Strava' ? stravaAppLink(li.u) : null;
       a.className = 'open'; a.href = appHref || li.u;
       if (!appHref) { a.target = '_blank'; a.rel = 'noopener'; }
-      a.setAttribute('aria-label', 'Open in ' + li.n);
-      a.appendChild(document.createTextNode(li.n));
+      a.setAttribute('aria-label', 'Open wandeling');
+      a.appendChild(document.createTextNode('Open'));
       var ns = 'http://www.w3.org/2000/svg';
       var svg = document.createElementNS(ns, 'svg');
       svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', '#111');
