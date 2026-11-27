@@ -152,6 +152,7 @@
     box-shadow: 0 4px 0 var(--ink);
   }
   .open svg { width: 18px; height: 18px; display: block; }
+  .open.more { display: flex; margin: 8px auto 0; padding: 16px 26px; font: inherit; font-weight: 900; font-size: 1.15rem; text-transform: uppercase; letter-spacing: .04em; cursor: pointer; }
   .open:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
   .open:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
   [hidden] { display: none !important; }
@@ -260,7 +261,7 @@
     document.body.classList.toggle('kmv', t !== 'shoes');
     if (t !== 'shoes') fitBack();
     if (t === 'km') loadKm();
-    if (t === 'walks') loadWalks();
+    if (t === 'walks') { walkShown = WALKS_STEP; loadWalks(); }
   }
 
   // Pijl exact even hoog als de letters van TERUG en met hetzelfde middelpunt,
@@ -391,7 +392,7 @@
   }
 
   // ---------- wandelingen ----------
-  var WALKS_MAX = 10, walkData = [];
+  var WALKS_STEP = 10, walkShown = WALKS_STEP, walkData = [];
 
   function parseWalk(str) {
     var m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(str || '');
@@ -461,7 +462,22 @@
 
   function renderWalks() {
     var box = $('walklist'); box.innerHTML = '';
-    walkData.slice(0, WALKS_MAX).forEach(function (w) { var c = walkCard(w); if (c) box.appendChild(c); });
+    var n = Math.min(walkData.length, walkShown);
+    for (var i = 0; i < n; i++) { var c = walkCard(walkData[i]); if (c) box.appendChild(c); }
+    if (walkData.length > n) {
+      var b = document.createElement('button');
+      b.className = 'open more'; b.type = 'button';
+      b.appendChild(document.createTextNode('Meer laden'));
+      var ns = 'http://www.w3.org/2000/svg';
+      var svg = document.createElementNS(ns, 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', '#111');
+      svg.setAttribute('stroke-width', '4'); svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
+      svg.setAttribute('aria-hidden', 'true');
+      var path = document.createElementNS(ns, 'path'); path.setAttribute('d', 'M12 4v15M5 13l7 7 7-7');
+      svg.appendChild(path); b.appendChild(svg);
+      b.onclick = function () { walkShown += WALKS_STEP; renderWalks(); };
+      box.appendChild(b);
+    }
   }
 
   function loadWalks() {
@@ -475,7 +491,7 @@
         if (res.code === 'BAD_KEY') { resetKey('Die sleutel klopt niet. Probeer opnieuw.'); return; }
         throw new Error(res.error || 'Onbekende fout');
       }
-      walkData = (res.walks || []).slice(0, WALKS_MAX);
+      walkData = res.walks || [];
       store('walks', JSON.stringify(walkData));
       renderWalks();
     }).catch(function (e) {
