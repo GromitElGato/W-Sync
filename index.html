@@ -179,7 +179,6 @@
   <button class="back" id="backShoes" type="button" hidden><svg viewBox="0 0 36 26" fill="none" stroke="#111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M33.5 13H2.5M13 2.5L2.5 13 13 23.5"/></svg><span>Terug</span></button>
   <div id="kmview" hidden>
     <div id="kmlist"></div>
-    <div class="last" id="lastWalk"></div>
     <div class="status" id="kmstatus" role="status" aria-live="polite"></div>
   </div>
 
@@ -399,14 +398,6 @@
     });
   }
 
-  function showLastWalk(iso) {
-    var el = $('lastWalk'), m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
-    if (!m) { el.textContent = ''; return; }
-    var d = new Date(+m[1], +m[2] - 1, +m[3]);
-    el.textContent = 'Laatste wandeling: ' +
-      d.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  }
-
   // ---------- wandelingen ----------
   var walkShown = 40, walkData = [];
 
@@ -494,7 +485,6 @@
     var cached = [];
     try { cached = JSON.parse(store('km') || '[]'); } catch (e) {}
     if (cached.length) renderKm(cached);
-    showLastWalk(store('kmlast'));
     $('kmstatus').className = 'status';
 
     api({ action: 'totals' }).then(function (res) {
@@ -503,9 +493,7 @@
         throw new Error(res.error || 'Onbekende fout');
       }
       store('km', JSON.stringify(res.shoes || []));
-      store('kmlast', res.last || '');
       renderKm(res.shoes || []);
-      showLastWalk(res.last);
     }).catch(function (e) {
       if (!cached.length) {
         var s = $('kmstatus');
@@ -517,9 +505,25 @@
     });
   }
 
-  $('backShoes').onclick = function () { setTab('shoes'); window.scrollTo(0, 0); };
-  $('goKm').onclick = function () { setTab('km'); window.scrollTo(0, 0); };
-  $('goWalks').onclick = function () { setTab('walks'); window.scrollTo(0, 0); };
+  // Elk scherm krijgt een eigen geschiedenisstap, zodat de terugknop van de telefoon (of veeggebaar) werkt.
+  function openTab(t) {
+    history.pushState({ t: t }, '');
+    setTab(t);
+    window.scrollTo(0, 0);
+  }
+  if (history.state && history.state.t) history.replaceState(null, '');
+  window.addEventListener('popstate', function (e) {
+    if (!$('setup').hidden) return;
+    var t = e.state && e.state.t;
+    setTab(t === 'km' || t === 'walks' ? t : 'shoes');
+    window.scrollTo(0, 0);
+  });
+  $('backShoes').onclick = function () {
+    if (history.state && history.state.t) history.back();
+    else { setTab('shoes'); window.scrollTo(0, 0); }
+  };
+  $('goKm').onclick = function () { openTab('km'); };
+  $('goWalks').onclick = function () { openTab('walks'); };
 
   // ---------- acties ----------
   function loadShoes() {
