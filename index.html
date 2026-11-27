@@ -91,7 +91,7 @@
     box-shadow: 0 7px 0 var(--ink); transition: transform .08s, box-shadow .08s;
   }
   .sq svg { width: 58px; height: 58px; display: block; }
-  #goKm { font: inherit; font-weight: 900; font-size: 2.1rem; letter-spacing: .02em; color: var(--ink); }
+  #goKm { font: inherit; font-weight: 700; font-size: 1.5rem; letter-spacing: 0; text-transform: none; color: var(--ink); }
   .sq:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
   .sq:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
   .go .fill {
@@ -189,7 +189,6 @@
 <div class="bar" id="bar">
   <div class="barin">
     <button class="go" id="go" disabled><span class="fill"></span><span class="lbl" id="golbl">Synchroniseren</span></button>
-    <button class="sq" id="goKm" type="button" aria-label="Kilometers per schoen">KM</button>
     <button class="sq" id="goWalks" type="button" aria-label="Alle wandelingen">
       <svg viewBox="0 0 48 48" fill="#111" aria-hidden="true">
         <circle cx="7.5" cy="11" r="4.5"/><rect x="18" y="7" width="27" height="8" rx="4"/>
@@ -197,6 +196,7 @@
         <circle cx="7.5" cy="37" r="4.5"/><rect x="18" y="33" width="27" height="8" rx="4"/>
       </svg>
     </button>
+    <button class="sq" id="goKm" type="button" aria-label="Kilometers per schoen">Km's</button>
   </div>
 </div>
 
