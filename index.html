@@ -471,6 +471,15 @@
     return { u: u, n: h.indexOf('strava') >= 0 ? 'Strava' : h.indexOf('garmin') >= 0 ? 'Garmin' : 'Link' };
   }
 
+  // Op Android opent een gewone Strava-link in de browser. Met een intent-link opent de Strava-app,
+  // en valt het toestel terug op de gewone webpagina als de app niet geïnstalleerd is.
+  function stravaAppLink(u) {
+    var m = /strava\.com\/(?:[a-z]{2}(?:-[A-Za-z]{2})?\/)?activities\/(\d+)/i.exec(u || '');
+    if (!m || !/Android/i.test(navigator.userAgent)) return null;
+    return 'intent://activities/' + m[1] + '#Intent;scheme=strava;package=com.strava;S.browser_fallback_url=' +
+      encodeURIComponent(u) + ';end';
+  }
+
   // Garmin noemt een wandeling meestal "<plaats> Wandelen": haal het soort activiteit eraf, dan blijft de plaats over.
   function placeFrom(name) {
     var t = String(name || '')
@@ -509,7 +518,9 @@
     var li = linkInfo(w.u);
     if (li) {
       var a = document.createElement('a');
-      a.className = 'open'; a.href = li.u; a.target = '_blank'; a.rel = 'noopener';
+      var appHref = li.n === 'Strava' ? stravaAppLink(li.u) : null;
+      a.className = 'open'; a.href = appHref || li.u;
+      if (!appHref) { a.target = '_blank'; a.rel = 'noopener'; }
       a.setAttribute('aria-label', 'Open in ' + li.n);
       a.appendChild(document.createTextNode(li.n));
       var ns = 'http://www.w3.org/2000/svg';
