@@ -30,8 +30,9 @@
     background: var(--orange); border-bottom: 8px solid var(--ink);
     padding: calc(44px + env(safe-area-inset-top, 0px)) 24px 34px;
   }
+  .topin { max-width: 680px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
   h2 {
-    max-width: 680px; margin: 0 auto;
+    flex: 1; min-width: 0; margin: 0;
     font-size: 4.5rem; line-height: 1.02; font-weight: 900;
     letter-spacing: -0.02em; color: var(--ink);
   }
@@ -50,8 +51,16 @@
     padding: 24px 22px; font: inherit; font-weight: 900; font-size: 1.5rem;
     line-height: 1.15; min-height: 104px; display: flex; align-items: center; gap: 22px;
     width: var(--w, auto); max-width: 100%;
+    position: relative; overflow: hidden;
     transition: transform .04s, box-shadow .04s, width .08s ease-out, background .04s;
   }
+  .shoe > * { position: relative; z-index: 1; }
+  .shoe > .prog {
+    position: absolute; z-index: 0; left: 0; top: 0; bottom: 0; width: 0;
+    background: rgba(252, 76, 2, .28); pointer-events: none;
+    transition: width .7s ease-out;
+  }
+  .shoe[aria-checked="true"] > .prog { background: rgba(0, 0, 0, .15); }
   .shoe[aria-checked="true"] { width: 100%; }
   .shoe:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); background: var(--orange); }
   .shoe .dot {
@@ -94,15 +103,31 @@
   .sq svg { width: 48px; height: 48px; display: block; }
   .sq:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
   .sq:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
-  .go .fill {
-    position: absolute; inset: 0; background: var(--paper);
-    transform: scaleX(0); transform-origin: left center; pointer-events: none;
-  }
-  .go.holding .fill { animation: hold 3s linear forwards; }
-  @keyframes hold { to { transform: scaleX(1); } }
-  .go .lbl { position: relative; display: inline-flex; align-items: center; }
   .go:active:not([disabled]) { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
   .go[disabled] { background: #d9d9d9; color: #555; box-shadow: 0 7px 0 #8a8a8a; border-color: #8a8a8a; cursor: default; }
+
+  /* Ronde synchroniseerknop naast de titel: vult van onder naar boven terwijl je indrukt */
+  .sync {
+    flex: none; position: relative; overflow: hidden; padding: 0; cursor: pointer;
+    width: 112px; height: 112px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--paper); color: var(--ink);
+    border: 5px solid var(--ink); box-shadow: 0 7px 0 var(--ink);
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    transition: transform .08s, box-shadow .08s;
+  }
+  .sync .fill {
+    position: absolute; inset: 0; background: #ffd0b8;
+    transform: scaleY(0); transform-origin: center bottom; pointer-events: none;
+  }
+  .sync.holding .fill { animation: hold 3s linear forwards; }
+  @keyframes hold { to { transform: scaleY(1); } }
+  .sync .lbl { position: relative; display: grid; place-items: center; }
+  .sync svg { width: 56px; height: 56px; display: block; }
+  .sync .spin { width: 44px; height: 44px; margin: 0; }
+  .sync:active:not([disabled]) { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
+  .sync:focus-visible { outline: 5px solid var(--paper); outline-offset: 4px; }
+  .sync[disabled] { background: #d9d9d9; color: #555; box-shadow: 0 7px 0 #8a8a8a; border-color: #8a8a8a; cursor: default; }
 
   .spin {
     display: inline-block; flex: none; width: 26px; height: 26px; margin-right: 16px;
@@ -117,6 +142,7 @@
   .status.show { display: block; }
   .status.ok { background: var(--ok-bg); color: var(--ok); border-color: var(--ok-line); }
   .status.err { background: var(--err-bg); color: var(--err); border-color: var(--err-line); }
+  .status.info { background: var(--paper); color: var(--ink); border-color: var(--ink); }
   .status strong { display: block; margin-bottom: 4px; font-size: 1.45rem; font-weight: 900; }
   .last:empty { display: none; }
   .last { display: inline-block; background: var(--paper); border: 4px solid var(--ink); border-radius: 14px; padding: 10px 16px; color: var(--ink); font-weight: 800; font-size: 1.1rem; margin-top: 28px; }
@@ -151,14 +177,12 @@
   .open:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
   .open:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
   .open.more.up { padding: 16px 20px; }
-  .go svg { width: 34px; height: 34px; margin-right: 14px; display: block; flex: none; }
   .month {
     display: inline-block; margin: 30px 0 14px; padding: 8px 18px;
     background: var(--ink); color: #fff; border-radius: 12px;
     font-weight: 900; font-size: 1.05rem; text-transform: uppercase; letter-spacing: .08em;
   }
   #walklist > .month:first-child { margin-top: 0; }
-  #appview .go { margin-top: 34px; }
   .tab {
     flex: 1; min-width: 0; height: 104px; cursor: pointer;
     background: var(--paper); color: var(--ink); border: 5px solid var(--ink); border-radius: 18px;
@@ -190,7 +214,12 @@
 </style>
 </head>
 <body>
-<header class="top"><h2 id="lbl">Kies je schoenen.</h2></header>
+<header class="top">
+  <div class="topin">
+    <h2 id="lbl">Kies je schoenen.</h2>
+    <button class="sync" id="go" type="button" disabled aria-label="Synchroniseren (houd 3 seconden ingedrukt)"><span class="fill"></span><span class="lbl" id="golbl"></span></button>
+  </div>
+</header>
 <main>
   <div id="setup" hidden>
     <p class="intro" id="setupMsg">Voer één keer je sleutel in.</p>
@@ -202,16 +231,15 @@
     <div class="shoes" id="shoes" role="radiogroup" aria-labelledby="lbl">
       <div class="skeleton"></div><div class="skeleton"></div>
     </div>
-    <button class="go" id="go" disabled><span class="fill"></span><span class="lbl" id="golbl">Synchroniseren</span></button>
     <div class="status" id="status" role="status" aria-live="polite"></div>
     <div class="last" id="last"></div>
   </div>
 
   <div id="walkview" hidden>
     <div class="mnav">
-      <button class="arr" id="mprev" type="button" aria-label="Vorige maand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12H5M11 5l-7 7 7 7"/></svg></button>
+      <button class="arr" id="mnewer" type="button" aria-label="Volgende maand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12H5M11 5l-7 7 7 7"/></svg></button>
       <div class="mt" id="mtitle" aria-live="polite"></div>
-      <button class="arr" id="mnext" type="button" aria-label="Volgende maand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 5l7 7-7 7"/></svg></button>
+      <button class="arr" id="molder" type="button" aria-label="Vorige maand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 5l7 7-7 7"/></svg></button>
     </div>
     <div id="walklist"></div>
     <div class="status" id="walkstatus" role="status" aria-live="polite"></div>
@@ -235,6 +263,9 @@
   var cooldown = false;
   var key = '';
   var $ = function (id) { return document.getElementById(id); };
+  var SHOE_MAX_KM = 1500; // balk is vol bij 1500 km
+  var SYNC_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.9-3M4 4v4.5h4.5M4 13a8 8 0 0 0 14.9 3M20 20v-4.5h-4.5"/></svg>';
+  $('golbl').innerHTML = SYNC_ICON;
 
   function store(k, v) {
     try {
@@ -269,6 +300,7 @@
     $('appview').hidden = true;
     $('walkview').hidden = true;
     $('bar').hidden = true;
+    $('go').hidden = true;
   }
 
   var tab = 'shoes';
@@ -278,6 +310,7 @@
     $('appview').hidden = t !== 'shoes';
     $('bar').hidden = false;
     $('walkview').hidden = t !== 'walks';
+    $('go').hidden = t !== 'shoes';
     $('tabShoes').setAttribute('aria-selected', t === 'shoes');
     $('tabWalks').setAttribute('aria-selected', t === 'walks');
     document.body.classList.toggle('kmv', t !== 'shoes');
@@ -318,6 +351,9 @@
       b.className = 'shoe';
       b.setAttribute('role', 'radio');
       b.setAttribute('aria-checked', name === selected);
+      var prog = document.createElement('span'); prog.className = 'prog';
+      prog.setAttribute('data-shoe', name); prog.style.width = pctFor(name) + '%';
+      b.appendChild(prog);
       var dot = document.createElement('span'); dot.className = 'dot';
       var txt = document.createElement('span'); txt.textContent = name;
       b.appendChild(dot); b.appendChild(txt);
@@ -386,9 +422,16 @@
     if (name === 'BLANCO' || kmMap[name] === undefined) return '';
     return fmtKm(kmMap[name]);
   }
+  function pctFor(name) {
+    var km = (name === 'BLANCO' ? 0 : Number(kmMap[name])) || 0;
+    return Math.max(0, Math.min(100, km / SHOE_MAX_KM * 100));
+  }
   function updateShoeKm() {
     Array.prototype.forEach.call(document.querySelectorAll('.skm'), function (el) {
       el.textContent = kmText(el.getAttribute('data-shoe'));
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.prog'), function (el) {
+      el.style.width = pctFor(el.getAttribute('data-shoe')) + '%';
     });
     measure();
   }
@@ -478,8 +521,8 @@
     viewIdx = Math.min(Math.max(viewIdx, oldest), cur);
     $('mtitle').textContent = new Date(Math.floor(viewIdx / 12), viewIdx % 12, 1)
       .toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' });
-    $('mprev').disabled = viewIdx <= oldest;
-    $('mnext').disabled = viewIdx >= cur;
+    $('molder').disabled = viewIdx <= oldest;
+    $('mnewer').disabled = viewIdx >= cur;
     var shown = 0;
     walkData.forEach(function (w) {
       var pw = parseWalk(w.d);
@@ -551,8 +594,9 @@
     else { setTab('shoes'); window.scrollTo(0, 0); }
   };
   $('tabWalks').onclick = function () { if (tab !== 'walks') openTab('walks'); };
-  $('mprev').onclick = function () { viewIdx--; renderWalks(); };
-  $('mnext').onclick = function () { viewIdx++; renderWalks(); };
+  // Rechts = een maand terug, links = een maand vooruit
+  $('molder').onclick = function () { viewIdx--; renderWalks(); };
+  $('mnewer').onclick = function () { viewIdx++; renderWalks(); };
 
   // ---------- acties ----------
   function loadShoes() {
@@ -584,7 +628,8 @@
     busy = true;
     var btn = $('go');
     btn.disabled = true;
-    $('golbl').innerHTML = '<span class="spin"></span>Bezig…';
+    $('golbl').innerHTML = '<span class="spin"></span>';
+    btn.setAttribute('aria-label', 'Bezig met synchroniseren');
     $('status').className = 'status';
     api({ action: 'sync', shoe: selected }).then(function (res) {
       if (!res.success) {
@@ -601,7 +646,8 @@
     }).then(function () {
       busy = false;
       btn.disabled = cooldown;
-      $('golbl').textContent = 'Synchroniseren';
+      $('golbl').innerHTML = SYNC_ICON;
+      btn.setAttribute('aria-label', 'Synchroniseren (houd 3 seconden ingedrukt)');
     });
   }
 
@@ -610,19 +656,19 @@
 
   function holdReset() {
     $('go').classList.remove('holding');
-    if (!busy) $('golbl').textContent = 'Synchroniseren';
   }
   function holdStart() {
     var g = $('go');
     if (holdT || busy || g.disabled || !selected) return;
     g.classList.add('holding');
-    $('golbl').textContent = 'Blijf indrukken…';
+    $('status').className = 'status';
     holdT = setTimeout(function () { holdT = null; holdReset(); runSync(); }, HOLD_MS);
   }
   function holdCancel() {
     if (!holdT) return;
     clearTimeout(holdT); holdT = null;
     holdReset();
+    if (!busy) show('info', 'Houd de knop ingedrukt', 'Houd de knop 3 seconden ingedrukt om te synchroniseren.');
   }
   (function () {
     var g = $('go');
