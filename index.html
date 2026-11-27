@@ -73,7 +73,9 @@
   }
   .go {
     display: block; width: 100%; max-width: 680px; margin: 0 auto;
-    border: 5px solid var(--ink); border-radius: 18px; padding: 28px 20px; min-height: 104px;
+    border: 5px solid var(--ink); border-radius: 18px; padding: 0 16px; height: 104px; min-height: 104px;
+    position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;
+    white-space: nowrap; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
     background: var(--orange); color: var(--ink);
     box-shadow: 0 7px 0 var(--ink);
     font: inherit; font-weight: 900; font-size: 1.7rem; cursor: pointer;
@@ -92,12 +94,19 @@
   #goKm { font: inherit; font-weight: 900; font-size: 2.1rem; letter-spacing: .02em; color: var(--ink); }
   .sq:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
   .sq:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
+  .go .fill {
+    position: absolute; inset: 0; background: var(--paper);
+    transform: scaleX(0); transform-origin: left center; pointer-events: none;
+  }
+  .go.holding .fill { animation: hold 3s linear forwards; }
+  @keyframes hold { to { transform: scaleX(1); } }
+  .go .lbl { position: relative; display: inline-flex; align-items: center; }
   .go:active:not([disabled]) { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
   .go[disabled] { background: #d9d9d9; color: #555; box-shadow: 0 7px 0 #8a8a8a; border-color: #8a8a8a; cursor: default; }
 
   .spin {
-    display: inline-block; width: 26px; height: 26px; margin-right: 16px;
-    vertical-align: -4px; border-radius: 50%;
+    display: inline-block; flex: none; width: 26px; height: 26px; margin-right: 16px;
+    border-radius: 50%;
     border: 5px solid currentColor; border-right-color: transparent;
     animation: r .8s linear infinite;
   }
@@ -120,15 +129,6 @@
   }
   .field:focus { outline: 5px solid var(--orange); outline-offset: 4px; }
   .go.static { position: static; }
-  .back {
-    appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 12px 0; cursor: pointer;
-    display: inline-flex; align-items: baseline; gap: 12px; margin-bottom: 14px;
-    font: inherit; font-weight: 900; font-size: 1.5rem; letter-spacing: .05em; text-transform: uppercase; color: var(--ink);
-  }
-  .back { line-height: 1; }
-  .back svg { height: .77em; width: auto; aspect-ratio: 36 / 26; display: block; flex: none; }
-  .back:active { opacity: .6; }
-  .back:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
   .kmrow {
     display: flex; justify-content: space-between; align-items: center; gap: 18px;
     background: var(--paper); border: 5px solid var(--ink); border-radius: 18px;
@@ -175,7 +175,6 @@
     <div class="last" id="last"></div>
   </div>
 
-  <button class="back" id="backShoes" type="button" hidden><svg viewBox="0 0 36 26" fill="none" stroke="#111" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M33.5 13H2.5M13 2.5L2.5 13 13 23.5"/></svg><span>Terug</span></button>
   <div id="kmview" hidden>
     <div id="kmlist"></div>
     <div class="status" id="kmstatus" role="status" aria-live="polite"></div>
@@ -189,7 +188,7 @@
 
 <div class="bar" id="bar">
   <div class="barin">
-    <button class="go" id="go" disabled>Synchroniseren</button>
+    <button class="go" id="go" disabled><span class="fill"></span><span class="lbl" id="golbl">Synchroniseren</span></button>
     <button class="sq" id="goKm" type="button" aria-label="Kilometers per schoen">KM</button>
     <button class="sq" id="goWalks" type="button" aria-label="Alle wandelingen">
       <svg viewBox="0 0 48 48" fill="#111" aria-hidden="true">
@@ -245,7 +244,6 @@
     $('appview').hidden = true;
     $('kmview').hidden = true;
     $('walkview').hidden = true;
-    $('backShoes').hidden = true;
     $('bar').hidden = true;
   }
 
@@ -257,15 +255,12 @@
     $('bar').hidden = t !== 'shoes';
     $('kmview').hidden = t !== 'km';
     $('walkview').hidden = t !== 'walks';
-    $('backShoes').hidden = t === 'shoes';
     document.body.classList.toggle('kmv', t !== 'shoes');
-    if (t !== 'shoes') fitBack();
     if (t === 'km') loadKm();
     if (t === 'walks') { walkShown = WALKS_STEP; loadWalks(); }
   }
 
-  // Pijl exact even hoog als de letters van TERUG en met hetzelfde middelpunt,
-  // ongeacht welk lettertype de telefoon gebruikt.
+  // Past alles op één scherm, dan staat scrollen (en de bounce) helemaal uit.
   function fitScroll() {
     var de = document.documentElement;
     de.classList.remove('lock');
@@ -275,21 +270,6 @@
   window.addEventListener('resize', fitScroll);
   fitScroll();
 
-  function fitBack() {
-    try {
-      var sp = $('backShoes').querySelector('span'), sv = $('backShoes').querySelector('svg');
-      var cs = getComputedStyle(sp);
-      var c = document.createElement('canvas').getContext('2d');
-      c.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
-      var m = c.measureText('TERUG');
-      var asc = m.actualBoundingBoxAscent, desc = m.actualBoundingBoxDescent;
-      if (!(asc > 0)) return;
-      // canvas rekent de rand van de letters ca. 0,5 px ruimer; daar corrigeren we voor
-      sv.style.height = (asc + desc - 1) + 'px';
-      sv.style.transform = 'translateY(' + (desc - 0.75) + 'px)';
-    } catch (e) {}
-  }
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitBack);
 
   function showApp() {
     $('setup').hidden = true;
@@ -542,10 +522,6 @@
     setTab(t === 'km' || t === 'walks' ? t : 'shoes');
     window.scrollTo(0, 0);
   });
-  $('backShoes').onclick = function () {
-    if (history.state && history.state.t) history.back();
-    else { setTab('shoes'); window.scrollTo(0, 0); }
-  };
   $('goKm').onclick = function () { openTab('km'); };
   $('goWalks').onclick = function () { openTab('walks'); };
 
@@ -573,12 +549,12 @@
     });
   }
 
-  $('go').onclick = function () {
+  function runSync() {
     if (busy || !selected) return;
     busy = true;
     var btn = $('go');
     btn.disabled = true;
-    btn.innerHTML = '<span class="spin"></span>Bezig met synchroniseren…';
+    $('golbl').innerHTML = '<span class="spin"></span>Bezig…';
     $('status').className = 'status';
     api({ action: 'sync', shoe: selected }).then(function (res) {
       if (!res.success) {
@@ -595,9 +571,41 @@
     }).then(function () {
       busy = false;
       btn.disabled = cooldown;
-      btn.textContent = 'Synchroniseren';
+      $('golbl').textContent = 'Synchroniseren';
     });
-  };
+  }
+
+  // Synchroniseren start pas nadat je de knop 3 seconden ingedrukt houdt.
+  var HOLD_MS = 3000, holdT = null;
+
+  function holdReset() {
+    $('go').classList.remove('holding');
+    if (!busy) $('golbl').textContent = 'Synchroniseren';
+  }
+  function holdStart() {
+    var g = $('go');
+    if (holdT || busy || g.disabled || !selected) return;
+    g.classList.add('holding');
+    $('golbl').textContent = 'Blijf indrukken…';
+    holdT = setTimeout(function () { holdT = null; holdReset(); runSync(); }, HOLD_MS);
+  }
+  function holdCancel() {
+    if (!holdT) return;
+    clearTimeout(holdT); holdT = null;
+    holdReset();
+  }
+  (function () {
+    var g = $('go');
+    g.addEventListener('pointerdown', function (e) { if (e.button > 0) return; holdStart(); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) { g.addEventListener(ev, holdCancel); });
+    g.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    g.addEventListener('keydown', function (e) {
+      if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); holdStart(); }
+    });
+    g.addEventListener('keyup', function (e) { if (e.key === 'Enter' || e.key === ' ') holdCancel(); });
+    g.addEventListener('blur', holdCancel);
+    document.addEventListener('visibilitychange', holdCancel);
+  })();
 
   $('saveKey').onclick = function () {
     var v = $('keyInput').value.trim();
