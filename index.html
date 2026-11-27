@@ -158,6 +158,25 @@
     font-weight: 900; font-size: 1.05rem; text-transform: uppercase; letter-spacing: .08em;
   }
   #walklist > .month:first-child { margin-top: 0; }
+  #appview .go { margin-top: 34px; }
+  .tab {
+    flex: 1; min-width: 0; height: 104px; cursor: pointer;
+    background: var(--paper); color: var(--ink); border: 5px solid var(--ink); border-radius: 18px;
+    box-shadow: 0 7px 0 var(--ink); font: inherit; font-weight: 900; font-size: 1.35rem;
+    text-transform: uppercase; letter-spacing: .04em; transition: transform .08s, box-shadow .08s;
+  }
+  .tab[aria-selected="true"] { background: var(--orange); }
+  .tab:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--ink); }
+  .tab:focus-visible { outline: 5px solid var(--orange); outline-offset: 4px; }
+  .mnav { display: flex; align-items: stretch; gap: 12px; margin-bottom: 26px; }
+  .mnav .sq { flex: 0 0 88px; width: 88px; min-height: 88px; }
+  .sq[disabled] { background: #d9d9d9; border-color: #8a8a8a; box-shadow: 0 7px 0 #8a8a8a; cursor: default; }
+  .mt {
+    flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; text-align: center;
+    background: var(--paper); border: 5px solid var(--ink); border-radius: 18px; padding: 8px 12px;
+    font-weight: 900; font-size: 1.5rem; text-transform: capitalize;
+  }
+  .empty { font-weight: 800; font-size: 1.2rem; text-align: center; padding: 20px 0; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -174,11 +193,17 @@
     <div class="shoes" id="shoes" role="radiogroup" aria-labelledby="lbl">
       <div class="skeleton"></div><div class="skeleton"></div>
     </div>
+    <button class="go" id="go" disabled><span class="fill"></span><span class="lbl" id="golbl">Synchroniseren</span></button>
     <div class="status" id="status" role="status" aria-live="polite"></div>
     <div class="last" id="last"></div>
   </div>
 
   <div id="walkview" hidden>
+    <div class="mnav">
+      <button class="sq" id="mprev" type="button" aria-label="Vorige maand"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12H5M11 5l-7 7 7 7"/></svg></button>
+      <div class="mt" id="mtitle" aria-live="polite"></div>
+      <button class="sq" id="mnext" type="button" aria-label="Volgende maand"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 5l7 7-7 7"/></svg></button>
+    </div>
     <div id="walklist"></div>
     <div class="status" id="walkstatus" role="status" aria-live="polite"></div>
   </div>
@@ -186,22 +211,8 @@
 
 <div class="bar" id="bar">
   <div class="barin">
-    <button class="go" id="go" disabled><span class="fill"></span><span class="lbl" id="golbl">Synchroniseren</span></button>
-    <button class="sq" id="goWalks" type="button" aria-label="Alle wandelingen">
-      <svg viewBox="0 0 48 48" fill="#111" aria-hidden="true">
-        <circle cx="8" cy="12" r="3.4"/><rect x="18" y="9" width="26" height="6" rx="3"/>
-        <circle cx="8" cy="24" r="3.4"/><rect x="18" y="21" width="26" height="6" rx="3"/>
-        <circle cx="8" cy="36" r="3.4"/><rect x="18" y="33" width="26" height="6" rx="3"/>
-      </svg>
-    </button>
-  </div>
-</div>
-
-<div class="bar" id="barBack" hidden>
-  <div class="barin">
-    <button class="go" id="goBack" type="button" aria-label="Terug naar schoenen">
-      <span class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12H5M11 5l-7 7 7 7"/></svg>Terug</span>
-    </button>
+    <button class="tab" id="tabShoes" type="button" aria-selected="true">Schoenen</button>
+    <button class="tab" id="tabWalks" type="button" aria-selected="false">Wandelingen</button>
   </div>
 </div>
 
@@ -249,7 +260,6 @@
     $('appview').hidden = true;
     $('walkview').hidden = true;
     $('bar').hidden = true;
-    $('barBack').hidden = true;
   }
 
   var tab = 'shoes';
@@ -257,11 +267,12 @@
     tab = t;
     $('lbl').textContent = t === 'shoes' ? 'Kies je schoenen.' : 'Wandelingen.';
     $('appview').hidden = t !== 'shoes';
-    $('bar').hidden = t !== 'shoes';
-    $('barBack').hidden = t === 'shoes';
+    $('bar').hidden = false;
     $('walkview').hidden = t !== 'walks';
+    $('tabShoes').setAttribute('aria-selected', t === 'shoes');
+    $('tabWalks').setAttribute('aria-selected', t === 'walks');
     document.body.classList.toggle('kmv', t !== 'shoes');
-    if (t === 'walks') { walkShown = WALKS_STEP; loadWalks(); }
+    if (t === 'walks') { viewIdx = curIdx(); loadWalks(); }
   }
 
   // Past alles op één scherm, dan staat scrollen (en de bounce) helemaal uit.
@@ -378,7 +389,9 @@
   }
 
   // ---------- wandelingen ----------
-  var WALKS_STEP = 10, walkShown = WALKS_STEP, walkData = [];
+  var walkData = [], viewIdx = 0; // viewIdx = jaar * 12 + maand (0-11) van de getoonde maand
+  function monthIdx(y, m) { return y * 12 + m; }
+  function curIdx() { var n = new Date(); return monthIdx(n.getFullYear(), n.getMonth()); }
 
   function parseWalk(str) {
     var m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(str || '');
@@ -448,51 +461,27 @@
 
   function renderWalks() {
     var box = $('walklist'); box.innerHTML = '';
-    var n = Math.min(walkData.length, walkShown);
-    var lastMonth = '';
-    for (var i = 0; i < n; i++) {
-      var c = walkCard(walkData[i]);
-      if (!c) continue;
-      var pw = parseWalk(walkData[i].d);
-      var mk = pw.date.getFullYear() + '-' + pw.date.getMonth();
-      if (mk !== lastMonth) {
-        lastMonth = mk;
-        var h = document.createElement('div'); h.className = 'month';
-        h.textContent = pw.date.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' });
-        box.appendChild(h);
-      }
-      box.appendChild(c);
-    }
-    var more = walkData.length > n, upBtn = n > WALKS_STEP;
-    if (more || upBtn) {
-      var row = document.createElement('div'); row.className = 'morerow';
-      var ns = 'http://www.w3.org/2000/svg';
-      function arrow(d) {
-        var svg = document.createElementNS(ns, 'svg');
-        svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', '#111');
-        svg.setAttribute('stroke-width', '4'); svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
-        svg.setAttribute('aria-hidden', 'true');
-        var path = document.createElementNS(ns, 'path'); path.setAttribute('d', d);
-        svg.appendChild(path);
-        return svg;
-      }
-      if (more) {
-        var b = document.createElement('button');
-        b.className = 'open more'; b.type = 'button';
-        b.appendChild(document.createTextNode('Meer laden'));
-        b.appendChild(arrow('M12 4v15M5 13l7 7 7-7'));
-        b.onclick = function () { walkShown += WALKS_STEP; renderWalks(); };
-        row.appendChild(b);
-      }
-      if (upBtn) {
-        var u = document.createElement('button');
-        u.className = 'open more up'; u.type = 'button';
-        u.setAttribute('aria-label', 'Terug naar het begin');
-        u.appendChild(arrow('M12 20V5M5 11l7-7 7 7'));
-        u.onclick = function () { window.scrollTo({ top: 0, behavior: 'smooth' }); };
-        row.appendChild(u);
-      }
-      box.appendChild(row);
+    var cur = curIdx(), oldest = cur;
+    walkData.forEach(function (w) {
+      var p = parseWalk(w.d);
+      if (p) oldest = Math.min(oldest, monthIdx(p.date.getFullYear(), p.date.getMonth()));
+    });
+    viewIdx = Math.min(Math.max(viewIdx, oldest), cur);
+    $('mtitle').textContent = new Date(Math.floor(viewIdx / 12), viewIdx % 12, 1)
+      .toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' });
+    $('mprev').disabled = viewIdx <= oldest;
+    $('mnext').disabled = viewIdx >= cur;
+    var shown = 0;
+    walkData.forEach(function (w) {
+      var pw = parseWalk(w.d);
+      if (!pw || monthIdx(pw.date.getFullYear(), pw.date.getMonth()) !== viewIdx) return;
+      var c = walkCard(w);
+      if (c) { box.appendChild(c); shown++; }
+    });
+    if (!shown) {
+      var e = document.createElement('div'); e.className = 'empty';
+      e.textContent = 'Geen wandelingen in deze maand.';
+      box.appendChild(e);
     }
   }
 
@@ -547,11 +536,14 @@
     setTab(t === 'walks' ? t : 'shoes');
     window.scrollTo(0, 0);
   });
-  $('goBack').onclick = function () {
+  $('tabShoes').onclick = function () {
+    if (tab === 'shoes') return;
     if (history.state && history.state.t) history.back();
     else { setTab('shoes'); window.scrollTo(0, 0); }
   };
-  $('goWalks').onclick = function () { openTab('walks'); };
+  $('tabWalks').onclick = function () { if (tab !== 'walks') openTab('walks'); };
+  $('mprev').onclick = function () { viewIdx--; renderWalks(); };
+  $('mnext').onclick = function () { viewIdx++; renderWalks(); };
 
   // ---------- acties ----------
   function loadShoes() {
